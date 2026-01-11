@@ -4,6 +4,7 @@ import {
   LayoutDashboardIcon,
   MessageSquareIcon,
   PillIcon,
+  ReceiptTextIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -24,6 +25,7 @@ export const navItems: NavItem[] = [
   { href: '/medications', label: 'Medications', iconName: 'PillIcon' },
   { href: '/messages', label: 'Messages', iconName: 'MessageSquareIcon' },
   { href: '/records', label: 'Health Records', iconName: 'FileTextIcon' },
+  { href: '/bills', label: 'Bills', iconName: 'ReceiptTextIcon' },
 ];
 
 export const iconMap: { [key: string]: LucideIcon } = {
@@ -32,6 +34,7 @@ export const iconMap: { [key: string]: LucideIcon } = {
   PillIcon,
   MessageSquareIcon,
   FileTextIcon,
+  ReceiptTextIcon,
 };
 
 
@@ -153,3 +156,11 @@ export const medicalHistory = {
     { name: 'Type 2 Diabetes', diagnosed: '2022' },
   ],
 };
+
+export const bills = [
+    { id: 'bill001', service: 'Cardiology Consultation', date: '2024-08-15', amount: 250, status: 'Paid', paymentMethod: 'Debit Card' },
+    { id: 'bill002', service: 'Dermatology Follow-up', date: '2024-08-22', amount: 150, status: 'Paid', paymentMethod: 'Insurance' },
+    { id: 'bill003', service: 'Lab Work: Lipid Panel', date: '2024-07-30', amount: 75, status: 'Paid', paymentMethod: 'UPI' },
+    { id: 'bill004', service: 'General Check-up', date: '2024-05-10', amount: 100, status: 'Paid', paymentMethod: 'Cash' },
+    { id: 'bill005', service: 'X-Ray Imaging', date: '2024-09-01', amount: 300, status: 'Pending', paymentMethod: 'N/A' },
+  ];
