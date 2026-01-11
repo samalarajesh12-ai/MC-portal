@@ -1,0 +1,375 @@
+{
+  "entities": {
+    "Patient": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Patient",
+      "type": "object",
+      "description": "Represents a patient in the MARUTHI CLINIC PORTAL.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Patient entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the patient."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the patient."
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "description": "The date of birth of the patient.",
+          "format": "date-time"
+        },
+        "gender": {
+          "type": "string",
+          "description": "The gender of the patient."
+        },
+        "contactNumber": {
+          "type": "string",
+          "description": "The contact number of the patient."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the patient.",
+          "format": "email"
+        },
+        "address": {
+          "type": "string",
+          "description": "The address of the patient."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "dateOfBirth",
+        "gender",
+        "contactNumber",
+        "email",
+        "address"
+      ]
+    },
+    "Appointment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Appointment",
+      "type": "object",
+      "description": "Represents an appointment scheduled in the MARUTHI CLINIC PORTAL.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Appointment entity."
+        },
+        "patientId": {
+          "type": "string",
+          "description": "Reference to Patient. (Relationship: Patient 1:N Appointment)"
+        },
+        "doctorId": {
+          "type": "string",
+          "description": "Reference to Doctor. (Relationship: Doctor 1:N Appointment)"
+        },
+        "appointmentDateTime": {
+          "type": "string",
+          "description": "The date and time of the appointment.",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": "string",
+          "description": "The reason for the appointment."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the appointment (e.g., Scheduled, Completed, Cancelled)."
+        }
+      },
+      "required": [
+        "id",
+        "patientId",
+        "doctorId",
+        "appointmentDateTime",
+        "reason",
+        "status"
+      ]
+    },
+    "MedicationRefillRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MedicationRefillRequest",
+      "type": "object",
+      "description": "Represents a medication refill request in the MARUTHI CLINIC PORTAL.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MedicationRefillRequest entity."
+        },
+        "patientId": {
+          "type": "string",
+          "description": "Reference to Patient. (Relationship: Patient 1:N MedicationRefillRequest)"
+        },
+        "medicationName": {
+          "type": "string",
+          "description": "The name of the medication to be refilled."
+        },
+        "dosage": {
+          "type": "string",
+          "description": "The dosage of the medication."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the medication requested."
+        },
+        "requestDate": {
+          "type": "string",
+          "description": "The date when the refill was requested.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the refill request (e.g., Pending, Approved, Denied)."
+        }
+      },
+      "required": [
+        "id",
+        "patientId",
+        "medicationName",
+        "dosage",
+        "quantity",
+        "requestDate",
+        "status"
+      ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a secure message exchanged between patients and healthcare providers.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Message entity."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "The ID of the user who sent the message (either patient or doctor)."
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "The ID of the user who received the message (either patient or doctor)."
+        },
+        "sentDateTime": {
+          "type": "string",
+          "description": "The date and time when the message was sent.",
+          "format": "date-time"
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the message."
+        }
+      },
+      "required": [
+        "id",
+        "senderId",
+        "receiverId",
+        "sentDateTime",
+        "content"
+      ]
+    },
+    "HealthRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "HealthRecord",
+      "type": "object",
+      "description": "Represents a patient's health record, including medical history and lab results.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the HealthRecord entity."
+        },
+        "patientId": {
+          "type": "string",
+          "description": "Reference to Patient. (Relationship: Patient 1:1 HealthRecord)"
+        },
+        "medicalHistory": {
+          "type": "string",
+          "description": "The medical history of the patient."
+        },
+        "labResults": {
+          "type": "string",
+          "description": "The lab results of the patient."
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "The date and time when the health record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "patientId",
+        "medicalHistory",
+        "labResults",
+        "lastUpdated"
+      ]
+    },
+    "Doctor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Doctor",
+      "type": "object",
+      "description": "Represents a doctor or healthcare provider.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Doctor entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the doctor."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the doctor."
+        },
+        "specialization": {
+          "type": "string",
+          "description": "The specialization of the doctor."
+        },
+        "contactNumber": {
+          "type": "string",
+          "description": "The contact number of the doctor."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the doctor.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "specialization",
+        "contactNumber",
+        "email"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/patients/{patientId}",
+        "definition": {
+          "entityName": "Patient",
+          "schema": {
+            "$ref": "#/backend/entities/Patient"
+          },
+          "description": "Stores patient information.  Accessed only by the corresponding user ID.",
+          "params": [
+            {
+              "name": "patientId",
+              "description": "The unique identifier for the patient."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/patients/{patientId}/appointments/{appointmentId}",
+        "definition": {
+          "entityName": "Appointment",
+          "schema": {
+            "$ref": "#/backend/entities/Appointment"
+          },
+          "description": "Stores appointments for a specific patient. Includes denormalized 'patientId' for authorization independence.",
+          "params": [
+            {
+              "name": "patientId",
+              "description": "The unique identifier for the patient."
+            },
+            {
+              "name": "appointmentId",
+              "description": "The unique identifier for the appointment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/patients/{patientId}/medicationRefillRequests/{medicationRefillRequestId}",
+        "definition": {
+          "entityName": "MedicationRefillRequest",
+          "schema": {
+            "$ref": "#/backend/entities/MedicationRefillRequest"
+          },
+          "description": "Stores medication refill requests for a specific patient. Includes denormalized 'patientId' for authorization independence.",
+          "params": [
+            {
+              "name": "patientId",
+              "description": "The unique identifier for the patient."
+            },
+            {
+              "name": "medicationRefillRequestId",
+              "description": "The unique identifier for the medication refill request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores messages between patients and doctors. Security rules will ensure that only the sender or receiver can access the message.",
+          "params": [
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/patients/{patientId}/healthRecords/{healthRecordId}",
+        "definition": {
+          "entityName": "HealthRecord",
+          "schema": {
+            "$ref": "#/backend/entities/HealthRecord"
+          },
+          "description": "Stores health records for a specific patient. Includes denormalized 'patientId' for authorization independence.",
+          "params": [
+            {
+              "name": "patientId",
+              "description": "The unique identifier for the patient."
+            },
+            {
+              "name": "healthRecordId",
+              "description": "The unique identifier for the health record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/doctors/{doctorId}",
+        "definition": {
+          "entityName": "Doctor",
+          "schema": {
+            "$ref": "#/backend/entities/Doctor"
+          },
+          "description": "Stores doctor information.  Accessed only by authorized admin roles.",
+          "params": [
+            {
+              "name": "doctorId",
+              "description": "The unique identifier for the doctor."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the MARUTHI CLINIC PORTAL application. It leverages path-based ownership for patient-related data and direct collection access for doctors, along with denormalization where necessary.\n\n*   **Patients:** Patients are stored under `/patients/{patientId}`. This allows direct access and management of patient data based on the `patientId`.  Patient owned entities use `/patients/{patientId}/<entity>`.\n*   **Appointments:**  Appointments are stored as subcollections under `/patients/{patientId}/appointments/{appointmentId}`. This structure ensures that appointments are directly associated with a specific patient. The `patientId` is denormalized into each appointment document to enforce authorization independence and prevent reliance on parent document reads in security rules. This enables atomic operations and simplifies rule logic.\n*   **Medication Refill Requests:** Medication refill requests are stored as subcollections under `/patients/{patientId}/medicationRefillRequests/{medicationRefillRequestId}`. The `patientId` is denormalized into each request document to maintain authorization independence. This structure ensures that each request is directly tied to the patient and simplifies security rules.\n*   **Messages:** Messages are stored in a top-level collection `/messages/{messageId}`.  Each message contains `senderId` and `receiverId` fields. This allows querying messages sent or received by a specific user. Security rules will ensure that only the sender or receiver can access the message.\n*   **Health Records:** Health records are stored as subcollections under `/patients/{patientId}/healthRecords/{healthRecordId}`. The `patientId` is denormalized into each health record document, guaranteeing authorization independence.\n*   **Doctors:** Doctors are stored under `/doctors/{doctorId}`. This provides direct access and management of doctor data.\n\nThis structure supports the required QAPs by:\n\n*   **Path-Based Ownership:** Utilizing `/patients/{patientId}/...` for patient-owned data guarantees that only the authenticated user with a matching `patientId` can access the data. This simplifies `list` operations as security rules can directly verify the path.\n*   **Authorization Independence:** Denormalizing `patientId` into subcollection documents (`appointments`, `medicationRefillRequests`, `healthRecords`) eliminates the need for `get()` calls in security rules, supporting atomic operations and improving performance.\n*   **Structural Segregation:**  Separating patient and doctor data into distinct collections ensures that security rules are homogeneous within each collection.  Messages do not contain any personal identifiable information and are secured using read restrictions.\n\nThis design promotes a secure, scalable, and easily debuggable Firestore structure, adhering to the core design principles and strategy mandates."
+  }
+}

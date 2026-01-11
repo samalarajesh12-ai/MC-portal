@@ -1,0 +1,159 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership model for a clinic portal. All patient-related data (appointments, health records, etc.) is siloed and accessible only by the authenticated user whose UID matches the patientId in the document path. Messages are an exception, employing a shared-access model where only the sender and receiver may view a message. Doctor profiles are treated as public information, readable by anyone, but are not writable to prevent unauthorized modification.
+ *
+ * Data Structure: The data is hierarchically organized under a top-level `/patients/{patientId}` collection. This structure naturally isolates each patient's data tree. Top-level collections for `/messages` and `/doctors` are used for data that is not exclusively owned by a single patient.
+ *
+ * Key Security Decisions:
+ * - Patient Data Isolation: All patient subcollections are secured by the parent `patientId` in the path, ensuring a user can only ever access their own data.
+ * - No User Listing: Global listing of patients, messages, or other sensitive collections is explicitly disabled to protect user privacy.
+ * - Public Doctor Directory: The `/doctors` collection is publicly readable to allow users to find healthcare providers. Writes are disabled pending the implementation of a proper admin role.
+ * - Secure Messaging: Access to messages is restricted to the sender and receiver. Message creation is validated to prevent sender spoofing.
+ *
+ * Denormalization for Authorization: To create performant and secure rules, authorization-critical data is denormalized. For instance, the `patientId` is stored directly on documents in subcollections like `appointments`. This avoids costly `get()` calls to parent documents. Similarly, `senderId` and `receiverId` fields on `Message` documents allow for direct, efficient authorization checks without needing to query other collections.
+ *
+ * Structural Segregation: Patient-private data and public doctor data are stored in separate top-level collections (`/patients` and `/doctors`). This clear separation allows for simpler and more secure rules, particularly for list operations.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------------
+    // Helper Functions
+    // ------------------------------------------------------------------------
+
+    /**
+     * isSignedIn
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * isOwner
+     * Checks if the authenticated user's UID matches the provided userId.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * isExistingOwner
+     * Checks if a document exists and if the user is its owner.
+     * Used for safe update and delete operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * isSender
+     * Checks if the user creating a message is the sender specified in the message data.
+     */
+    function isSender() {
+      return isSignedIn() && request.resource.data.senderId == request.auth.uid;
+    }
+
+    /**
+     * isSenderOrReceiver
+     * Checks if the authenticated user is either the sender or receiver of an existing message.
+     */
+    function isSenderOrReceiver() {
+      return isSignedIn() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+    }
+
+    // ------------------------------------------------------------------------
+    // Collection Rules
+    // ------------------------------------------------------------------------
+
+    /**
+     * @description A patient's own profile document.
+     * @path /patients/{patientId}
+     * @allow A signed-in user (uid: 'user123') can (create) their own document at `/patients/user123`.
+     * @deny A signed-in user (uid: 'user456') cannot (get) or (update) the document at `/patients/user123`.
+     * @principle Enforces Self-Creation and strict document Ownership. A user manages their own root document.
+     */
+    match /patients/{patientId} {
+      allow get: if isOwner(patientId);
+      allow list: if false;
+      allow create: if isOwner(patientId) && request.resource.data.id == patientId;
+      allow update: if isExistingOwner(patientId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(patientId);
+    }
+
+    /**
+     * @description A patient's appointments.
+     * @path /patients/{patientId}/appointments/{appointmentId}
+     * @allow A signed-in user (uid: 'user123') can (list) and (create) appointments under `/patients/user123/appointments`.
+     * @deny A signed-in user (uid: 'user456') cannot (get) any document under `/patients/user123/appointments`.
+     * @principle Restricts access to a user's own data tree and validates relational integrity on create/update.
+     */
+    match /patients/{patientId}/appointments/{appointmentId} {
+      allow get: if isOwner(patientId);
+      allow list: if isOwner(patientId);
+      allow create: if isOwner(patientId) && request.resource.data.patientId == patientId;
+      allow update: if isExistingOwner(patientId) && request.resource.data.patientId == resource.data.patientId;
+      allow delete: if isExistingOwner(patientId);
+    }
+
+    /**
+     * @description A patient's medication refill requests.
+     * @path /patients/{patientId}/medicationRefillRequests/{medicationRefillRequestId}
+     * @allow A signed-in user (uid: 'user123') can (list) and (create) refill requests under `/patients/user123/medicationRefillRequests`.
+     * @deny A signed-in user (uid: 'user456') cannot (get) any document under `/patients/user123/medicationRefillRequests`.
+     * @principle Restricts access to a user's own data tree and validates relational integrity on create/update.
+     */
+    match /patients/{patientId}/medicationRefillRequests/{medicationRefillRequestId} {
+      allow get: if isOwner(patientId);
+      allow list: if isOwner(patientId);
+      allow create: if isOwner(patientId) && request.resource.data.patientId == patientId;
+      allow update: if isExistingOwner(patientId) && request.resource.data.patientId == resource.data.patientId;
+      allow delete: if isExistingOwner(patientId);
+    }
+
+    /**
+     * @description A patient's private health records.
+     * @path /patients/{patientId}/healthRecords/{healthRecordId}
+     * @allow A signed-in user (uid: 'user123') can (get) and (create) health records under `/patients/user123/healthRecords`.
+     * @deny A signed-in user (uid: 'user456') cannot (list) any documents under `/patients/user123/healthRecords`.
+     * @principle Restricts access to a user's own data tree and validates relational integrity on create/update.
+     */
+    match /patients/{patientId}/healthRecords/{healthRecordId} {
+      allow get: if isOwner(patientId);
+      allow list: if isOwner(patientId);
+      allow create: if isOwner(patientId) && request.resource.data.patientId == patientId;
+      allow update: if isExistingOwner(patientId) && request.resource.data.patientId == resource.data.patientId;
+      allow delete: if isExistingOwner(patientId);
+    }
+
+    /**
+     * @description Secure messages between patients and doctors.
+     * @path /messages/{messageId}
+     * @allow A user (uid: 'sender123') can (get) a message where `resource.data.senderId == 'sender123'`.
+     * @deny A user (uid: 'other_user') cannot (get) a message where they are not the sender or receiver. Listing all messages is denied.
+     * @principle Implements a Shared Access model. Only the sender or receiver can read/delete. Creation requires being the sender.
+     */
+    match /messages/{messageId} {
+      allow get: if isSignedIn() && resource != null && isSenderOrReceiver();
+      allow list: if false;
+      allow create: if isSender();
+      allow update: if false; // Messages are immutable to maintain conversation integrity.
+      allow delete: if isSignedIn() && resource != null && isSenderOrReceiver();
+    }
+
+    /**
+     * @description Publicly viewable doctor profiles.
+     * @path /doctors/{doctorId}
+     * @allow Any user, signed in or not, can (get) and (list) doctor profiles.
+     * @deny No user can (create), (update), or (delete) a doctor profile through the client SDK.
+     * @principle Manages public, read-only data. Writes are disabled pending implementation of secure admin roles.
+     */
+    match /doctors/{doctorId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
