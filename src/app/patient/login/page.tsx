@@ -26,10 +26,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export default function PatientLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
   const [showFaceIdModal, setShowFaceIdModal] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<
@@ -71,17 +74,31 @@ export default function PatientLoginPage() {
     }
   }, [showFaceIdModal]);
 
-  const handleLogin = (event: React.FormEvent) => {
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    toast({
-      title: 'Login Successful',
-      description: 'Welcome back! Redirecting to your dashboard.',
-    });
-    router.push('/dashboard');
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: 'Login Successful',
+        description: 'Welcome back! Redirecting to your dashboard.',
+      });
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: error.message || 'Please check your credentials and try again.',
+      });
+    }
   };
 
   const handleFaceIdVerification = () => {
     setIsVerifying(true);
+    // In a real app, you'd send the captured image to a face recognition service
     setTimeout(() => {
       setIsVerifying(false);
       setShowFaceIdModal(false);
@@ -97,7 +114,7 @@ export default function PatientLoginPage() {
     <>
       <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
         <Link href="/" className="mb-8 flex items-center gap-2">
-        <svg
+          <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             fill="currentColor"
@@ -126,16 +143,18 @@ export default function PatientLoginPage() {
           <CardContent className="space-y-4">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="username"
-                  placeholder="Generated username"
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="patient@example.com"
                   required
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" required />
+                <Input id="password" name="password" type="password" required />
               </div>
               <Button type="submit" className="w-full">
                 Sign In
@@ -201,17 +220,16 @@ export default function PatientLoginPage() {
                 </AlertDescription>
               </Alert>
             )}
-             {isVerifying && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <p className="mt-2 text-lg font-semibold text-white">Verifying...</p>
-                </div>
+            {isVerifying && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
+                <p className="mt-2 text-lg font-semibold text-white">
+                  Verifying...
+                </p>
+              </div>
             )}
           </div>
           <AlertDialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowFaceIdModal(false)}
-            >
+            <Button variant="outline" onClick={() => setShowFaceIdModal(false)}>
               Cancel
             </Button>
             <Button
@@ -226,3 +244,5 @@ export default function PatientLoginPage() {
     </>
   );
 }
+
+    

@@ -8,7 +8,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Patient entity."
+          "description": "Unique identifier for the Patient entity, matches Firebase Auth UID."
         },
         "firstName": {
           "type": "string",
@@ -18,23 +18,47 @@
           "type": "string",
           "description": "The last name of the patient."
         },
-        "dateOfBirth": {
-          "type": "string",
-          "description": "The date of birth of the patient.",
-          "format": "date-time"
-        },
-        "gender": {
-          "type": "string",
-          "description": "The gender of the patient."
-        },
-        "contactNumber": {
-          "type": "string",
-          "description": "The contact number of the patient."
-        },
         "email": {
           "type": "string",
           "description": "The email address of the patient.",
           "format": "email"
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "description": "The date of birth of the patient.",
+          "format": "date"
+        },
+        "bloodGroup": {
+          "type": "string",
+          "description": "The patient's blood group."
+        },
+        "location": {
+          "type": "string",
+          "description": "The city or town where the patient resides."
+        },
+        "preExistingConditions": {
+          "type": "string",
+          "description": "A summary of the patient's pre-existing conditions or diseases."
+        },
+        "nomineeName": {
+          "type": "string",
+          "description": "The name of the patient's nominee."
+        },
+        "nomineeRelation": {
+          "type": "string",
+          "description": "The patient's relationship to the nominee."
+        },
+        "faceImage": {
+          "type": "string",
+          "description": "A Base64 encoded data URI of the patient's face image for authentication."
+        },
+        "digitalSignature": {
+          "type": "string",
+          "description": "The patient's digital signature (optional)."
+        },
+        "contactNumber": {
+          "type": "string",
+          "description": "The contact number of the patient."
         },
         "address": {
           "type": "string",
@@ -45,11 +69,8 @@
         "id",
         "firstName",
         "lastName",
-        "dateOfBirth",
-        "gender",
-        "contactNumber",
         "email",
-        "address"
+        "dateOfBirth"
       ]
     },
     "Appointment": {
@@ -255,7 +276,7 @@
   },
   "auth": {
     "providers": [
-      "password",
+      "email",
       "anonymous"
     ]
   },
@@ -373,3 +394,5 @@
     "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability for the MARUTHI CLINIC PORTAL application. It leverages path-based ownership for patient-related data and direct collection access for doctors, along with denormalization where necessary.\n\n*   **Patients:** Patients are stored under `/patients/{patientId}`. This allows direct access and management of patient data based on the `patientId`.  Patient owned entities use `/patients/{patientId}/<entity>`.\n*   **Appointments:**  Appointments are stored as subcollections under `/patients/{patientId}/appointments/{appointmentId}`. This structure ensures that appointments are directly associated with a specific patient. The `patientId` is denormalized into each appointment document to enforce authorization independence and prevent reliance on parent document reads in security rules. This enables atomic operations and simplifies rule logic.\n*   **Medication Refill Requests:** Medication refill requests are stored as subcollections under `/patients/{patientId}/medicationRefillRequests/{medicationRefillRequestId}`. The `patientId` is denormalized into each request document to maintain authorization independence. This structure ensures that each request is directly tied to the patient and simplifies security rules.\n*   **Messages:** Messages are stored in a top-level collection `/messages/{messageId}`.  Each message contains `senderId` and `receiverId` fields. This allows querying messages sent or received by a specific user. Security rules will ensure that only the sender or receiver can access the message.\n*   **Health Records:** Health records are stored as subcollections under `/patients/{patientId}/healthRecords/{healthRecordId}`. The `patientId` is denormalized into each health record document, guaranteeing authorization independence.\n*   **Doctors:** Doctors are stored under `/doctors/{doctorId}`. This provides direct access and management of doctor data.\n\nThis structure supports the required QAPs by:\n\n*   **Path-Based Ownership:** Utilizing `/patients/{patientId}/...` for patient-owned data guarantees that only the authenticated user with a matching `patientId` can access the data. This simplifies `list` operations as security rules can directly verify the path.\n*   **Authorization Independence:** Denormalizing `patientId` into subcollection documents (`appointments`, `medicationRefillRequests`, `healthRecords`) eliminates the need for `get()` calls in security rules, supporting atomic operations and improving performance.\n*   **Structural Segregation:**  Separating patient and doctor data into distinct collections ensures that security rules are homogeneous within each collection.  Messages do not contain any personal identifiable information and are secured using read restrictions.\n\nThis design promotes a secure, scalable, and easily debuggable Firestore structure, adhering to the core design principles and strategy mandates."
   }
 }
+
+    
