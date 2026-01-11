@@ -92,7 +92,7 @@ export default function PortalLayout({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link href="/" className="flex items-center gap-2 p-2">
+          <Link href="/dashboard" className="flex items-center gap-2 p-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
