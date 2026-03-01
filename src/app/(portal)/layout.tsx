@@ -1,5 +1,6 @@
-import React from 'react';
-import Image from 'next/image';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Bell, Search, LogOut } from 'lucide-react';
 import {
@@ -22,13 +23,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
-import { patient, navItems } from '@/lib/data';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { navItems } from '@/lib/data';
 import NavItems from './_components/nav-items';
+import { getStorageItem, removeStorageItem } from '@/lib/storage';
 
-
-function Header() {
-  const userAvatar = PlaceHolderImages.find((img) => img.id === 'user-avatar');
+function Header({ user }: { user: any }) {
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
       <SidebarTrigger className="md:hidden" />
@@ -52,14 +51,13 @@ function Header() {
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="icon" className="rounded-full">
             <Avatar className="h-8 w-8">
-              {userAvatar && (
+              {user?.faceImage && (
                 <AvatarImage
-                  src={userAvatar.imageUrl}
-                  alt={patient.name}
-                  data-ai-hint={userAvatar.imageHint}
+                  src={user.faceImage}
+                  alt={user.firstName}
                 />
               )}
-              <AvatarFallback>{patient.name.charAt(0)}</AvatarFallback>
+              <AvatarFallback>{user?.firstName?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             <span className="sr-only">Toggle user menu</span>
           </Button>
@@ -71,29 +69,35 @@ function Header() {
           <DropdownMenuItem>Support</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
+            <Link href="/" onClick={() => removeStorageItem('currentUser')}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Logout</span>
             </Link>
-            </DropdownMenuItem>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>
   );
 }
 
-
 export default function PortalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const currentUser = getStorageItem('currentUser', null);
+    setUser(currentUser);
+  }, []);
+
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
           <Link href="/dashboard" className="flex items-center gap-2 p-2">
-          <svg
+            <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="currentColor"
@@ -117,7 +121,7 @@ export default function PortalLayout({
         </SidebarContent>
       </Sidebar>
       <SidebarInset className="flex flex-col">
-        <Header />
+        <Header user={user} />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
