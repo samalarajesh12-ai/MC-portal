@@ -27,6 +27,7 @@ import {
   Pill,
   ShieldCheck,
   Plus,
+  ShieldAlert,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
@@ -218,9 +219,14 @@ export default function DashboardPage() {
                 <p className="text-lg font-bold text-primary">{user.bloodGroup || 'Not set'}</p>
               </div>
               <div className="space-y-1">
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Contact Number</Label>
+                <p className="text-sm font-semibold truncate">{user.contactNumber || 'Not provided'}</p>
+                <p className="text-[10px] text-muted-foreground">DOB: {user.dob || user.dateOfBirth || 'Not set'}</p>
+              </div>
+              <div className="space-y-1 col-span-2">
                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Emergency Contact</Label>
-                <p className="text-sm font-semibold truncate">{user.emergencyContactName || 'None listed'}</p>
-                <p className="text-[10px] text-muted-foreground">{user.emergencyContactPhone}</p>
+                <p className="text-sm font-semibold">{user.emergencyContactName || 'None listed'}</p>
+                <p className="text-[10px] text-muted-foreground">{user.emergencyContactPhone} ({user.emergencyContactRelation})</p>
               </div>
             </div>
             

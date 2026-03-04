@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { UserPlus, Copy, Check, Camera, ShieldAlert, Stethoscope, Upload, Info } from 'lucide-react';
+import { UserPlus, Copy, Check, Camera, ShieldAlert, Stethoscope, Upload, Info, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -52,6 +52,7 @@ const formSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
+  contactNumber: z.string().min(10, 'Valid contact number is required'),
   dob: z.string().min(1, 'Date of birth is required'),
   bloodGroup: z.string().min(1, 'Blood group is required'),
   location: z.string().min(1, 'Location is required'),
@@ -86,6 +87,7 @@ export default function PatientRegisterPage() {
       firstName: '',
       lastName: '',
       email: '',
+      contactNumber: '',
       dob: '',
       bloodGroup: '',
       location: '',
@@ -220,6 +222,9 @@ export default function PatientRegisterPage() {
                       )} />
                       <FormField control={methods.control} name="email" render={({ field }) => (
                         <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" placeholder="john.doe@example.com" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={methods.control} name="contactNumber" render={({ field }) => (
+                        <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input type="tel" placeholder="+91..." {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={methods.control} name="dob" render={({ field }) => (
                         <FormItem>
