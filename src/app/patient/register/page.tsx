@@ -255,10 +255,13 @@ export default function PatientRegisterPage() {
                             <PopoverContent className="w-auto p-0" align="start">
                               <Calendar
                                 mode="single"
+                                captionLayout="dropdown"
+                                startMonth={new Date(1950, 0)}
+                                endMonth={new Date(2030, 11)}
                                 selected={field.value ? new Date(field.value) : undefined}
                                 onSelect={(date) => field.onChange(date?.toISOString())}
                                 disabled={(date) =>
-                                  date > new Date() || date < new Date("1900-01-01")
+                                  date > new Date("2030-12-31") || date < new Date("1950-01-01")
                                 }
                                 initialFocus
                               />
