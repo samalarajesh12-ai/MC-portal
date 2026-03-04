@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { format } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/table';
 import {
   ArrowUpRight,
-  Calendar,
+  Calendar as CalendarIconIcon,
   MessageSquare,
   Pill,
   ShieldCheck,
@@ -42,7 +43,11 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 const COMMON_DISEASES = [
   "Hypertension (High Blood Pressure)",
@@ -62,8 +67,12 @@ export default function DashboardPage() {
   const [userMessages, setUserMessages] = useState<any[]>([]);
   const [userMedications, setUserMedications] = useState<any[]>([]);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  
+  // Profile edit states
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
   const [manualConditions, setManualConditions] = useState('');
+  const [editContact, setEditContact] = useState('');
+  const [editDob, setEditDob] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     seedStorage();
@@ -79,7 +88,13 @@ export default function DashboardPage() {
       setUserMessages(allMessages.filter(m => m.receiverId === currentUser.id || !m.receiverId));
       setUserMedications(allMedications.filter(med => med.patientId === currentUser.id || !med.patientId));
 
-      // Check if profile needs completion (if no selectedDiseases or preExistingConditions)
+      // Sync local edit state with user profile
+      setSelectedDiseases(currentUser.selectedDiseases || []);
+      setManualConditions(currentUser.preExistingConditions || '');
+      setEditContact(currentUser.contactNumber || '');
+      setEditDob(currentUser.dob || currentUser.dateOfBirth || undefined);
+
+      // Check if profile needs completion
       if (currentUser.role !== 'admin' && currentUser.role !== 'doctor' && !currentUser.selectedDiseases && !currentUser.preExistingConditions) {
         setShowProfileDialog(true);
       }
@@ -90,7 +105,9 @@ export default function DashboardPage() {
     const updatedUser = { 
       ...user, 
       selectedDiseases, 
-      preExistingConditions: manualConditions 
+      preExistingConditions: manualConditions,
+      contactNumber: editContact,
+      dob: editDob
     };
     
     // Update current user in storage
@@ -108,7 +125,7 @@ export default function DashboardPage() {
     setShowProfileDialog(false);
     toast({
       title: "Medical Profile Updated",
-      description: "Your health history has been securely saved to your record.",
+      description: "Your health history and contact details have been securely saved.",
     });
   };
 
@@ -143,7 +160,7 @@ export default function DashboardPage() {
         <Card className="border-primary/20 bg-card shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Upcoming Appointments</CardTitle>
-            <div className="bg-primary/10 p-2 rounded-full"><Calendar className="h-4 w-4 text-primary" /></div>
+            <div className="bg-primary/10 p-2 rounded-full"><CalendarIconIcon className="h-4 w-4 text-primary" /></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{userAppointments.length}</div>
@@ -221,7 +238,7 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Contact Number</Label>
                 <p className="text-sm font-semibold truncate">{user.contactNumber || 'Not provided'}</p>
-                <p className="text-[10px] text-muted-foreground">DOB: {user.dob || user.dateOfBirth || 'Not set'}</p>
+                <p className="text-[10px] text-muted-foreground">DOB: {user.dob ? format(new Date(user.dob), "PPP") : 'Not set'}</p>
               </div>
               <div className="space-y-1 col-span-2">
                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Emergency Contact</Label>
@@ -244,22 +261,68 @@ export default function DashboardPage() {
           </CardContent>
           <CardFooter className="pt-0">
              <Button variant="outline" size="sm" className="w-full text-xs h-8" onClick={() => setShowProfileDialog(true)}>
-               Update Medical History
+               Update Medical Profile
              </Button>
           </CardFooter>
         </Card>
       </div>
 
-      {/* Profile Completion Dialog */}
+      {/* Profile Completion/Update Dialog */}
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-headline text-primary">Complete Your Medical Profile</DialogTitle>
+            <DialogTitle className="text-2xl font-headline text-primary">Manage Your Medical Identity</DialogTitle>
             <DialogDescription>
-              To provide the best care, please select any known medical conditions or type them manually below.
+              Keep your health history and clinical contact information up to date.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
+            {/* Contact Info and DOB */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-contact" className="font-semibold">Current Contact Number</Label>
+                <Input 
+                  id="edit-contact" 
+                  type="tel" 
+                  value={editContact} 
+                  onChange={(e) => setEditContact(e.target.value)}
+                  placeholder="+91..."
+                />
+              </div>
+              <div className="space-y-2 flex flex-col">
+                <Label className="font-semibold mb-1">Date of Birth</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full pl-3 text-left font-normal",
+                        !editDob && "text-muted-foreground"
+                      )}
+                    >
+                      {editDob ? (
+                        format(new Date(editDob), "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                      <CalendarIconIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={editDob ? new Date(editDob) : undefined}
+                      onSelect={(date) => setEditDob(date?.toISOString())}
+                      disabled={(date) =>
+                        date > new Date() || date < new Date("1900-01-01")
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
             <div className="space-y-3">
               <Label className="text-base font-semibold">Common Conditions</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -298,7 +361,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button className="w-full" onClick={handleSaveProfile}>Save Medical Records</Button>
+            <Button className="w-full" onClick={handleSaveProfile}>Save Comprehensive Profile</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
