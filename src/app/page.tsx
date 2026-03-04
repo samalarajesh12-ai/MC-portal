@@ -40,7 +40,7 @@ export default function LandingPage() {
                 AI-powered Health Assessment
               </h2>
               <p className="max-w-xl text-lg text-muted-foreground leading-relaxed">
-                Experience the future of healthcare at Maruthi Clinic. Our advanced AI-driven tools provide deep insights into your health, starting with professional biometric face analysis.
+                Experience the future of healthcare at Maruthi Clinic. Our advanced AI-driven tools provide deep insights into your health, starting with professional biometric face analysis in a clinical setting you can trust.
               </p>
             </div>
             <div className="flex gap-4">
