@@ -13,10 +13,10 @@
       "imageHint": "face recognition"
     },
     {
-      "id": "hero-doctor-patient",
-      "description": "A professional and compassionate interaction between a doctor and a patient in a modern hospital setting.",
-      "imageUrl": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=1080",
-      "imageHint": "doctor patient"
+      "id": "hero-hospital-facility",
+      "description": "A modern, high-tech hospital lobby or clinic interior representing professional healthcare infrastructure.",
+      "imageUrl": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&q=80&w=1080",
+      "imageHint": "hospital clinic"
     }
   ]
 }
