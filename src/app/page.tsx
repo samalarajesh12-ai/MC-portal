@@ -1,4 +1,3 @@
-
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Stethoscope, User, ShieldAlert } from 'lucide-react';
@@ -53,13 +52,14 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="flex justify-center">
-            <div className="relative overflow-hidden rounded-xl shadow-2xl border-4 border-primary/10">
+            <div className="relative overflow-hidden rounded-xl shadow-2xl border-4 border-primary/10 bg-black">
               <img
-                src={heroImage?.imageUrl || "https://picsum.photos/seed/face-analysis/600/400"}
+                src={heroImage?.imageUrl || "https://images.unsplash.com/photo-1509063919149-578ae97992e8?auto=format&fit=crop&q=80&w=1080"}
                 alt="AI-powered Face Analysis"
-                className="object-cover aspect-video w-full"
-                data-ai-hint={heroImage?.imageHint || "face mesh"}
+                className="object-cover aspect-square w-full max-w-[500px]"
+                data-ai-hint={heroImage?.imageHint || "face recognition"}
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent pointer-events-none"></div>
             </div>
           </div>
         </section>
