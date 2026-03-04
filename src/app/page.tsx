@@ -32,12 +32,17 @@ export default function LandingPage() {
       <main className="flex-1">
         <section className="container mx-auto grid grid-cols-1 items-center gap-12 px-6 py-24 md:grid-cols-2 lg:py-32">
           <div className="space-y-6">
-            <h1 className="text-4xl font-extrabold tracking-tighter text-primary md:text-5xl lg:text-7xl">
-              Face Analysis: AI-powered Health Assessment.
+            <h1 className="text-5xl font-extrabold tracking-tighter text-primary md:text-6xl lg:text-8xl font-headline">
+              Face Analysis
             </h1>
-            <p className="max-w-xl text-lg text-muted-foreground leading-relaxed">
-              Experience the future of healthcare at Maruthi Clinic. Our advanced AI-driven tools provide deep insights into your health, starting with professional biometric face analysis.
-            </p>
+            <div className="space-y-2">
+               <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+                AI-powered Health Assessment
+              </h2>
+              <p className="max-w-xl text-lg text-muted-foreground leading-relaxed">
+                Experience the future of healthcare at Maruthi Clinic. Our advanced AI-driven tools provide deep insights into your health, starting with professional biometric face analysis.
+              </p>
+            </div>
             <div className="flex gap-4">
               <Button size="lg" asChild className="px-8">
                 <Link href="/patient/register">Get Started Today</Link>
@@ -48,12 +53,14 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="flex justify-center">
-            <img
-              src={heroImage?.imageUrl || "https://picsum.photos/seed/face-analysis/600/400"}
-              alt="AI-powered Face Analysis"
-              className="rounded-xl shadow-2xl border-4 border-primary/10 object-cover aspect-video"
-              data-ai-hint={heroImage?.imageHint || "face analysis"}
-            />
+            <div className="relative overflow-hidden rounded-xl shadow-2xl border-4 border-primary/10">
+              <img
+                src={heroImage?.imageUrl || "https://picsum.photos/seed/face-analysis/600/400"}
+                alt="AI-powered Face Analysis"
+                className="object-cover aspect-video w-full"
+                data-ai-hint={heroImage?.imageHint || "face mesh"}
+              />
+            </div>
           </div>
         </section>
 

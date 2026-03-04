@@ -8,9 +8,9 @@
     },
     {
       "id": "hero-face-analysis",
-      "description": "AI-powered face analysis and health assessment visualization.",
+      "description": "AI-powered face analysis and health assessment wireframe visualization.",
       "imageUrl": "https://images.unsplash.com/photo-1590650153855-d9e808231d41?auto=format&fit=crop&q=80&w=1080",
-      "imageHint": "face analysis"
+      "imageHint": "face mesh"
     }
   ]
 }
