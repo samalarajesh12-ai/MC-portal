@@ -51,7 +51,7 @@ export default function BillsPage() {
               <TableRow key={bill.id}>
                 <TableCell className="font-medium">{bill.service}</TableCell>
                 <TableCell>{bill.date}</TableCell>
-                <TableCell>${bill.amount.toFixed(2)}</TableCell>
+                <TableCell>Rs {bill.amount.toFixed(2)}</TableCell>
                 <TableCell>
                   <Badge
                     variant={bill.status === 'Paid' ? 'secondary' : 'outline'}
