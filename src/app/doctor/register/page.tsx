@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -24,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { getStorageItem, setStorageItem } from '@/lib/storage';
 
 export default function DoctorRegisterPage() {
@@ -47,11 +45,6 @@ export default function DoctorRegisterPage() {
       } catch (error) {
         console.error('Error accessing camera:', error);
         setHasCameraPermission(false);
-        toast({
-          variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Please enable camera permissions in your browser settings to complete doctor registration.',
-        });
       }
     };
 
@@ -63,7 +56,7 @@ export default function DoctorRegisterPage() {
             stream.getTracks().forEach((track) => track.stop());
         }
     };
-  }, [toast]);
+  }, []);
   
   const handleRegister = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -230,15 +223,6 @@ export default function DoctorRegisterPage() {
                 <div className="relative flex items-center justify-center overflow-hidden rounded-md border-2 border-primary/20 bg-black/5">
                     <video ref={videoRef} className="w-full max-w-sm aspect-video object-cover" autoPlay muted playsInline />
                     <canvas ref={canvasRef} className="hidden"></canvas>
-                    {hasCameraPermission === false && (
-                        <Alert variant="destructive" className="absolute mx-4">
-                            <ShieldAlert className="h-4 w-4"/>
-                            <AlertTitle>Camera Access Required</AlertTitle>
-                            <AlertDescription>
-                                Please allow camera access for face registration.
-                            </AlertDescription>
-                        </Alert>
-                    )}
                 </div>
                 <div className="flex flex-col items-center gap-4 sm:flex-row justify-center">
                     <Button type="button" onClick={captureFaceImage} disabled={hasCameraPermission !== true} variant="outline" className="border-primary text-primary hover:bg-primary/10">Capture Face Image</Button>

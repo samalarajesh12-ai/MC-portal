@@ -44,7 +44,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { getStorageItem, setStorageItem } from '@/lib/storage';
 
 const formSchema = z.object({
@@ -111,11 +110,6 @@ export default function PatientRegisterPage() {
       } catch (error) {
         console.error('Error accessing camera:', error);
         setHasCameraPermission(false);
-        toast({
-          variant: 'destructive',
-          title: 'Camera Access Denied',
-          description: 'Please enable camera permissions in your browser settings to use biometric features.',
-        });
       }
     };
     getCameraPermission();
@@ -125,7 +119,7 @@ export default function PatientRegisterPage() {
         stream.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [toast]);
+  }, []);
 
   const handleRegister = (values: z.infer<typeof formSchema>) => {
     if (!faceImage) {
@@ -278,13 +272,6 @@ export default function PatientRegisterPage() {
                         <div className="relative w-full aspect-video rounded-md bg-black/5 overflow-hidden border-2 border-dashed border-primary/20">
                           <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
                           <canvas ref={canvasRef} className="hidden"></canvas>
-                          {hasCameraPermission === false && (
-                            <Alert variant="destructive" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%]">
-                              <ShieldAlert className="h-4 w-4" />
-                              <AlertTitle>No Camera Access</AlertTitle>
-                              <AlertDescription>Please enable camera or use the upload option below.</AlertDescription>
-                            </Alert>
-                          )}
                         </div>
                         <Button type="button" onClick={captureFaceImage} disabled={hasCameraPermission !== true} variant="outline" className="mt-4 w-full">
                           Capture from Webcam
@@ -294,7 +281,7 @@ export default function PatientRegisterPage() {
                       <div className="flex flex-col items-center justify-center flex-1 w-full lg:w-auto self-stretch gap-4 border-l pl-6 border-dashed border-primary/20">
                         <div className="text-center space-y-2">
                           <p className="text-sm font-medium text-muted-foreground">Or Upload Portrait</p>
-                          <Input 
+                          <input 
                             type="file" 
                             accept="image/*" 
                             className="hidden" 

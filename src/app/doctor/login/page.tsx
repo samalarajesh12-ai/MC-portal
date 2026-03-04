@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -17,7 +16,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Stethoscope, Camera, ShieldAlert, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
 
@@ -42,11 +40,6 @@ export default function DoctorLoginPage() {
         } catch (error) {
           console.error('Error accessing camera:', error);
           setHasCameraPermission(false);
-          toast({
-            variant: 'destructive',
-            title: 'Camera Access Denied',
-            description: 'Please enable camera permissions in your browser settings to use biometric staff login.',
-          });
         }
       };
       getCameraPermission();
@@ -57,7 +50,7 @@ export default function DoctorLoginPage() {
         }
       };
     }
-  }, [loginMethod, toast]);
+  }, [loginMethod]);
 
   const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -138,13 +131,6 @@ export default function DoctorLoginPage() {
               <div className="space-y-4">
                 <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden rounded-lg bg-black/5 border-2 border-dashed border-primary/20">
                   <video ref={videoRef} className="w-full aspect-video object-cover" autoPlay muted playsInline />
-                  {hasCameraPermission === false && (
-                    <Alert variant="destructive" className="absolute mx-4">
-                      <ShieldAlert className="h-4 w-4" />
-                      <AlertTitle>Camera Access Required</AlertTitle>
-                      <AlertDescription>Please enable camera access in your browser.</AlertDescription>
-                    </Alert>
-                  )}
                   {isVerifying && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary/20 backdrop-blur-sm">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mb-2"></div>
