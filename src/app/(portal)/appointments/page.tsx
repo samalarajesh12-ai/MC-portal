@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -44,9 +43,12 @@ import { format, parseISO, compareAsc } from 'date-fns';
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
+    // Set initial date on client to avoid hydration mismatch
+    setSelectedDate(new Date());
+    
     seedStorage();
     const storedAppointments = getStorageItem<any[]>('appointments', []);
     const storedDoctors = getStorageItem<any[]>('doctors', []);
