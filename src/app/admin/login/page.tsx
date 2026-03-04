@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { setStorageItem } from '@/lib/storage';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -21,21 +22,22 @@ export default function AdminLoginPage() {
 
   const handleLogin = (event: React.FormEvent) => {
     event.preventDefault();
+    setStorageItem('currentUser', { id: 'admin', role: 'admin', firstName: 'Admin' });
     toast({
       title: 'Login Successful',
-      description: 'Redirecting to the dashboard...',
+      description: 'Redirecting to management dashboard...',
     });
-    router.push('/dashboard');
+    router.push('/admin/dashboard');
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
        <Link href="/" className="mb-8 flex items-center gap-2">
        <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
             fill="currentColor"
-            className="h-7 w-7 text-primary"
+            className="h-8 w-8 text-primary"
           >
             <path
               fillRule="evenodd"
@@ -43,24 +45,24 @@ export default function AdminLoginPage() {
               clipRule="evenodd"
             />
           </svg>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline">
                 MARUTHI CLINIC
             </h1>
         </Link>
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm shadow-xl border-primary/20">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
+          <div className="mx-auto mb-4 bg-primary/10 p-3 rounded-full w-fit">
             <ShieldAlert className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Admin Portal</CardTitle>
+          <CardTitle className="text-2xl font-headline">Admin Portal</CardTitle>
           <CardDescription>
-            Enter your credentials for confidential access.
+            Confidential access for management only.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Admin Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -70,11 +72,11 @@ export default function AdminLoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Security Password</Label>
               <Input id="password" type="password" required defaultValue="password" />
             </div>
-            <Button type="submit" className="w-full">
-              Login
+            <Button type="submit" className="w-full h-11">
+              Authenticate
             </Button>
           </form>
         </CardContent>

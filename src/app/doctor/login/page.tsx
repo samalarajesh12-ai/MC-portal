@@ -18,6 +18,7 @@ import { Stethoscope, Camera, ShieldAlert, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
 
 export default function DoctorLoginPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function DoctorLoginPage() {
   const [loginMethod, setLoginMethod] = useState('password');
 
   useEffect(() => {
+    seedStorage();
     if (loginMethod === 'faceid') {
       const getCameraPermission = async () => {
         try {
@@ -50,24 +52,36 @@ export default function DoctorLoginPage() {
     }
   }, [loginMethod]);
 
-  const handleLogin = (event: React.FormEvent) => {
+  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    toast({
-      title: 'Login Successful',
-      description: 'Welcome back, Doctor! Redirecting to your portal.',
-    });
-    router.push('/dashboard');
+    const formData = new FormData(event.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    const doctors = getStorageItem<any[]>('doctors', []);
+    const doctor = doctors.find(d => d.email === email && d.password === password);
+
+    if (doctor) {
+      setStorageItem('currentUser', { ...doctor, role: 'doctor' });
+      toast({ title: 'Login Successful', description: `Welcome back, Dr. ${doctor.firstName || doctor.name}!` });
+      router.push('/dashboard');
+    } else {
+      toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid work email or password.' });
+    }
   };
 
   const handleFaceIdVerification = () => {
     setIsVerifying(true);
     setTimeout(() => {
       setIsVerifying(false);
-      toast({
-        title: 'Face ID Verified!',
-        description: 'Welcome back, Doctor! Redirecting to your portal.',
-      });
-      router.push('/dashboard');
+      const doctors = getStorageItem<any[]>('doctors', []);
+      if (doctors.length > 0) {
+        setStorageItem('currentUser', { ...doctors[0], role: 'doctor' });
+        toast({ title: 'Face ID Verified!', description: 'Welcome back, Doctor!' });
+        router.push('/dashboard');
+      } else {
+        toast({ variant: 'destructive', title: 'Face ID Failed', description: 'No registered medical staff found with this biometric data.' });
+      }
     }, 2000);
   };
 
@@ -77,7 +91,7 @@ export default function DoctorLoginPage() {
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8 text-primary">
           <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clipRule="evenodd" />
         </svg>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline">MARUTHI CLINIC</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline text-primary">MARUTHI CLINIC</h1>
       </Link>
 
       <Card className="w-full max-w-md shadow-xl border-primary/10">
@@ -103,11 +117,11 @@ export default function DoctorLoginPage() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Work Email</Label>
-                  <Input id="email" type="email" placeholder="doctor@maruthi.clinic" required />
+                  <Input id="email" name="email" type="email" placeholder="doctor@maruthi.clinic" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" required />
+                  <Input id="password" name="password" type="password" required />
                 </div>
                 <Button type="submit" className="w-full h-11">Sign In to Dashboard</Button>
               </form>

@@ -25,19 +25,34 @@ import {
   Pill,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { appointments, messages, medications } from '@/lib/data';
-import { getStorageItem } from '@/lib/storage';
+import { getStorageItem, seedStorage } from '@/lib/storage';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
+  const [userAppointments, setUserAppointments] = useState<any[]>([]);
+  const [userMessages, setUserMessages] = useState<any[]>([]);
+  const [userMedications, setUserMedications] = useState<any[]>([]);
 
   useEffect(() => {
+    seedStorage();
     const currentUser = getStorageItem('currentUser', null);
     setUser(currentUser);
+
+    if (currentUser) {
+      const allAppointments = getStorageItem<any[]>('appointments', []);
+      const allMessages = getStorageItem<any[]>('messages', []);
+      const allMedications = getStorageItem<any[]>('medications', []);
+
+      // Filter data for the specific patient
+      // In a real app, IDs would match. Here we filter by a mock name match for initial data
+      setUserAppointments(allAppointments.filter(a => a.patientId === currentUser.id || !a.patientId));
+      setUserMessages(allMessages.filter(m => m.receiverId === currentUser.id || !m.receiverId));
+      setUserMedications(allMedications.filter(med => med.patientId === currentUser.id || !med.patientId));
+    }
   }, []);
 
-  const unreadMessagesCount = messages.filter((m) => !m.read).length;
-  const refillsNeededCount = medications.filter((m) => m.refillsLeft === 0).length;
+  const unreadMessagesCount = userMessages.filter((m) => !m.read).length;
+  const refillsNeededCount = userMedications.filter((m) => m.refillsLeft === 0).length;
 
   if (!user) {
     return (
@@ -49,35 +64,35 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold font-headline">
+      <h1 className="text-3xl font-bold font-headline text-primary">
         Welcome back, {user.firstName}!
       </h1>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+        <Card className="border-primary/20 bg-card shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Upcoming Appointments</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{appointments.length}</div>
-            <p className="text-xs text-muted-foreground">You have {appointments.length} appointments scheduled.</p>
+            <div className="text-2xl font-bold">{userAppointments.length}</div>
+            <p className="text-xs text-muted-foreground">You have {userAppointments.length} appointments scheduled.</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/20 bg-card shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">New Messages</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <MessageSquare className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{unreadMessagesCount}</div>
             <p className="text-xs text-muted-foreground">You have {unreadMessagesCount} unread messages.</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/20 bg-card shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Medication Refills</CardTitle>
-            <Pill className="h-4 w-4 text-muted-foreground" />
+            <Pill className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{refillsNeededCount}</div>
@@ -87,7 +102,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-primary/10">
           <CardHeader className="flex flex-row items-center">
             <div className="grid gap-2">
               <CardTitle>Upcoming Appointments</CardTitle>
@@ -101,18 +116,23 @@ export default function DashboardPage() {
             <Table>
               <TableHeader><TableRow><TableHead>Doctor</TableHead><TableHead>Department</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
               <TableBody>
-                {appointments.slice(0, 3).map((appointment) => (
+                {userAppointments.slice(0, 3).map((appointment) => (
                   <TableRow key={appointment.id}>
                     <TableCell><div className="font-medium">{appointment.doctor}</div></TableCell>
                     <TableCell>{appointment.department}</TableCell>
                     <TableCell>{appointment.date} at {appointment.time}</TableCell>
                   </TableRow>
                 ))}
+                {userAppointments.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">No upcoming appointments.</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-primary/10">
           <CardHeader className="flex flex-row items-center">
             <div className="grid gap-2">
               <CardTitle>Recent Messages</CardTitle>
@@ -123,17 +143,20 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent className="grid gap-4">
-            {messages.slice(0, 3).map((message) => (
-              <div key={message.id} className="flex items-start gap-4">
+            {userMessages.slice(0, 3).map((message) => (
+              <div key={message.id} className="flex items-start gap-4 p-2 rounded-md hover:bg-muted/50 transition-colors">
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <p className="font-medium">{message.sender}</p>
-                    {!message.read && <Badge className="bg-primary hover:bg-primary">New</Badge>}
+                    {!message.read && <Badge className="bg-primary">New</Badge>}
                   </div>
-                  <p className="text-sm text-muted-foreground">{message.subject}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-1">{message.subject}</p>
                 </div>
               </div>
             ))}
+            {userMessages.length === 0 && (
+              <p className="text-center py-4 text-muted-foreground">No messages found.</p>
+            )}
           </CardContent>
         </Card>
       </div>
