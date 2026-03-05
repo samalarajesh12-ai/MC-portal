@@ -86,8 +86,8 @@ export const dailyAttendance = [
 export const initialAppointments = [
   {
     id: 'app1',
-    doctor: 'Dr. John Smith',
-    doctorId: 'dr-smith',
+    doctor: 'Dr. Raj Kumar',
+    doctorId: 'dr-raj',
     patient: 'Robert Fox',
     patientId: 'p1',
     department: 'Cardiology',
@@ -97,11 +97,11 @@ export const initialAppointments = [
   },
   {
     id: 'app2',
-    doctor: 'Dr. Sarah Jones',
-    doctorId: 'dr-jones',
+    doctor: 'Dr. Ramesh',
+    doctorId: 'dr-ramesh',
     patient: 'Jane Cooper',
     patientId: 'p2',
-    department: 'Dermatology',
+    department: 'General Surgery',
     date: '2024-08-22',
     time: '02:30 PM',
     status: 'Confirmed',
@@ -110,26 +110,48 @@ export const initialAppointments = [
 
 export const initialDoctors = [
   { 
+    id: 'dr-raj', 
+    firstName: 'Raj', 
+    lastName: 'Kumar', 
+    specialty: 'Cardiology', 
+    experience: 15, 
+    email: 'dr.raj@maruthi.clinic', 
+    password: '123',
+    license: 'MC-100201',
+    contactNumber: '+91-90000-1111'
+  },
+  { 
+    id: 'dr-ramesh', 
+    firstName: 'Ramesh', 
+    lastName: '', 
+    specialty: 'General Surgery', 
+    experience: 10, 
+    email: 'dr.ramesh@maruthi.clinic', 
+    password: '123',
+    license: 'MC-200302',
+    contactNumber: '+91-90000-2222'
+  },
+  { 
+    id: 'dr-kumar', 
+    firstName: 'Kumar', 
+    lastName: '', 
+    specialty: 'Pediatrics', 
+    experience: 12, 
+    email: 'dr.kumar@maruthi.clinic', 
+    password: '123',
+    license: 'MC-300403',
+    contactNumber: '+91-90000-3333'
+  },
+  { 
     id: 'dr-smith', 
     firstName: 'John', 
     lastName: 'Smith', 
-    specialty: 'Cardiology', 
-    experience: 12, 
+    specialty: 'Dermatology', 
+    experience: 8, 
     email: 'dr.smith@maruthi.clinic', 
     password: '123',
     license: 'MC-882910',
     contactNumber: '+91-98822-1100'
-  },
-  { 
-    id: 'dr-jones', 
-    firstName: 'Sarah', 
-    lastName: 'Jones', 
-    specialty: 'Dermatology', 
-    experience: 8, 
-    email: 'dr.jones@maruthi.clinic', 
-    password: '123',
-    license: 'MC-771822',
-    contactNumber: '+91-77221-3344'
   },
 ];
   

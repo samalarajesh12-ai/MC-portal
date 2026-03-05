@@ -44,27 +44,27 @@ export const removeStorageItem = (key: string): void => {
 export const seedStorage = () => {
   if (typeof window === 'undefined') return;
 
-  const SEED_KEY = 'maruthi_clinic_v4_stable';
+  const SEED_KEY = 'maruthi_clinic_v5_doctors_update';
 
   if (!localStorage.getItem(SEED_KEY)) {
     // 1. Core User Collections
-    if (!localStorage.getItem('patients')) setStorageItem('patients', []);
-    if (!localStorage.getItem('doctors')) setStorageItem('doctors', initialDoctors);
+    setStorageItem('patients', getStorageItem('patients', []));
+    setStorageItem('doctors', initialDoctors);
     
     // 2. Clinical Activity Data
-    if (!localStorage.getItem('appointments')) setStorageItem('appointments', initialAppointments);
-    if (!localStorage.getItem('medications')) setStorageItem('medications', initialMedications);
-    if (!localStorage.getItem('bills')) setStorageItem('bills', initialBills);
+    setStorageItem('appointments', initialAppointments);
+    setStorageItem('medications', initialMedications);
+    setStorageItem('bills', initialBills);
     
     // 3. Health Record System
-    if (!localStorage.getItem('labResults')) setStorageItem('labResults', initialLabResults);
-    if (!localStorage.getItem('medicalHistory')) setStorageItem('medicalHistory', initialMedicalHistory);
+    setStorageItem('labResults', initialLabResults);
+    setStorageItem('medicalHistory', initialMedicalHistory);
     
     // 4. System Notifications
     if (!localStorage.getItem('notifications')) setStorageItem('notifications', []);
     
     // Mark as seeded to prevent overwriting user data on next reload
     localStorage.setItem(SEED_KEY, 'true');
-    console.log("Maruthi Clinic: Professional storage seeded successfully.");
+    console.log("Maruthi Clinic: Professional storage seeded with updated doctors.");
   }
 };
