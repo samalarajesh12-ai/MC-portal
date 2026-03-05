@@ -95,7 +95,7 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
       setIsCameraActive(true);
       if (videoRef.current) videoRef.current.srcObject = stream;
     } catch (err) {
-      toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access webcam.' });
+      toast({ variant: 'destructive', title: 'Camera Error', description: 'Could not access webcam for biometric identity.' });
     }
   };
 
@@ -115,6 +115,7 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
       ctx?.drawImage(videoRef.current, 0, 0);
       setFaceImage(canvasRef.current.toDataURL('image/png'));
       stopCamera();
+      toast({ title: 'Biometric image captured successfully.' });
     }
   };
 
@@ -122,12 +123,19 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setFaceImage(reader.result as string);
+      reader.onloadend = () => {
+        setFaceImage(reader.result as string);
+        toast({ title: 'Biometric identity uploaded.' });
+      };
       reader.readAsDataURL(file);
     }
   };
 
   const handleSave = () => {
+    if (!faceImage) {
+      toast({ variant: 'destructive', title: 'Missing Identity', description: 'Biometric face image is mandatory for clinical profile updates.' });
+      return;
+    }
     onSave({
       ...user,
       contactNumber: editContact,
@@ -148,6 +156,7 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
             type="tel" 
             value={editContact} 
             onChange={(e) => setEditContact(e.target.value)}
+            placeholder="+91-XXXXX-XXXXX"
           />
         </div>
         <div className="space-y-2">
@@ -163,30 +172,30 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
       <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
         <Label className="flex items-center gap-2 font-semibold">
           <Camera className="h-4 w-4 text-primary"/>
-          Update Identity (Face Image)
+          Synchronize Biometric Identity (Face)
         </Label>
         <div className="flex flex-col gap-4">
           {isCameraActive ? (
             <div className="space-y-3">
               <video ref={videoRef} className="w-full aspect-video rounded-md bg-black" autoPlay muted playsInline />
               <div className="flex gap-2">
-                <Button onClick={captureImage} className="flex-1">Capture</Button>
+                <Button onClick={captureImage} className="flex-1">Capture Identity</Button>
                 <Button variant="ghost" onClick={stopCamera}>Cancel</Button>
               </div>
             </div>
           ) : (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={startCamera} className="flex-1 gap-2"><Camera className="h-4 w-4"/> Use Camera</Button>
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 gap-2"><Upload className="h-4 w-4"/> Upload</Button>
+              <Button variant="outline" onClick={startCamera} className="flex-1 gap-2"><Camera className="h-4 w-4"/> Use Webcam</Button>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 gap-2"><Upload className="h-4 w-4"/> Upload Photo</Button>
             </div>
           )}
           <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
           {faceImage && !isCameraActive && (
-             <div className="flex items-center gap-3 bg-card p-2 rounded-md border">
+             <div className="flex items-center gap-3 bg-card p-2 rounded-md border border-green-200">
                <div className="h-12 w-12 rounded-full overflow-hidden border">
                  <img src={faceImage} className="h-full w-full object-cover" alt="Identity Preview" />
                </div>
-               <span className="text-xs text-green-600 font-medium flex items-center gap-1"><Check className="h-3 w-3"/> Biometric Updated</span>
+               <span className="text-xs text-green-600 font-medium flex items-center gap-1"><Check className="h-3 w-3"/> Biometric Identity Secured</span>
              </div>
           )}
         </div>
@@ -195,7 +204,7 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
       {user.role !== 'doctor' && (
         <>
           <div className="space-y-3">
-            <Label className="text-base font-semibold">Chronic Conditions</Label>
+            <Label className="text-base font-semibold">Chronic Health Conditions</Label>
             <div className="grid grid-cols-2 gap-2">
               {COMMON_DISEASES.map((disease) => (
                 <div key={disease} className="flex items-center space-x-2">
@@ -207,18 +216,19 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
                       else setSelectedDiseases(selectedDiseases.filter(d => d !== disease));
                     }}
                   />
-                  <label htmlFor={disease} className="text-[11px] leading-tight">{disease}</label>
+                  <label htmlFor={disease} className="text-[11px] leading-tight cursor-pointer">{disease}</label>
                 </div>
               ))}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-base font-semibold">Other History</Label>
+            <Label className="text-base font-semibold">Additional Medical History</Label>
             <Textarea 
-              placeholder="List any major allergies or surgeries..."
+              placeholder="Allergies, past surgeries, or special clinical notes..."
               value={manualConditions}
               onChange={(e) => setManualConditions(e.target.value)}
+              className="text-xs"
             />
           </div>
         </>
@@ -226,8 +236,8 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
       
       <canvas ref={canvasRef} className="hidden" />
       <div className="flex gap-2 pt-4">
-        <Button className="flex-1" onClick={handleSave}>Save Updates</Button>
-        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+        <Button className="flex-1" onClick={handleSave}>Synchronize Profile Updates</Button>
+        <Button variant="ghost" onClick={onCancel}>Discard Changes</Button>
       </div>
     </div>
   );
@@ -243,7 +253,7 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
           <h1 className="text-3xl font-bold font-headline text-primary">
             Medical Performance Dashboard
           </h1>
-          <p className="text-muted-foreground">Dr. {user.lastName || user.firstName} | {user.specialty || 'Medical Specialist'}</p>
+          <p className="text-muted-foreground">Dr. {user.lastName || user.firstName} | {user.specialty || user.specialization || 'Medical Specialist'}</p>
         </div>
         <div className="flex items-center gap-2">
            <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>Edit Profile & Face</Button>
@@ -352,8 +362,8 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>Update Medical Staff Profile</DialogTitle>
-            <DialogDescription>Manage your contact and biometric identity.</DialogDescription>
+            <DialogTitle>Update Medical Staff Identity</DialogTitle>
+            <DialogDescription>Synchronize your contact and biometric identity records.</DialogDescription>
           </DialogHeader>
           <ProfileEditForm 
             user={user} 
@@ -376,8 +386,13 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
     if (user) {
       const allAppointments = getStorageItem<any[]>('appointments', []);
       const allMedications = getStorageItem<any[]>('medications', []);
-      setUserAppointments(allAppointments.filter(a => a.patientId === user.id || !a.patientId));
-      setUserMedications(allMedications.filter(med => med.patientId === user.id || !med.patientId));
+      // Filter appointments and medications specifically for the logged-in user
+      const filteredApps = allAppointments.filter(a => a.patientId === user.id || a.patient === `${user.firstName} ${user.lastName}`);
+      const filteredMeds = allMedications.filter(med => med.patientId === user.id);
+      
+      setUserAppointments(filteredApps);
+      setUserMedications(filteredMeds);
+      
       if (!user.isProfileCompleted) setShowProfileDialog(true);
     }
   }, [user]);
@@ -391,7 +406,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
           <h1 className="text-3xl font-bold font-headline text-primary">
             Welcome back, {user.firstName}!
           </h1>
-          <p className="text-muted-foreground">Clinical overview for Maruthi Clinic.</p>
+          <p className="text-muted-foreground">Comprehensive clinical overview for Maruthi Clinic.</p>
         </div>
         <div className="flex items-center gap-2">
            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 py-1 px-3">
@@ -408,17 +423,17 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{userAppointments.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Confirmed clinical visits.</p>
+            <p className="text-xs text-muted-foreground mt-1">Confirmed clinical visits logged.</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Refills Needed</CardTitle>
+            <CardTitle className="text-sm font-medium">Medication Refills</CardTitle>
             <div className="bg-primary/10 p-2 rounded-full"><Pill className="h-4 w-4 text-primary" /></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{refillsNeededCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Medications requiring attention.</p>
+            <p className="text-xs text-muted-foreground mt-1">Medications requiring clinical attention.</p>
           </CardContent>
         </Card>
       </div>
@@ -428,23 +443,31 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
           <CardHeader className="flex flex-row items-center">
             <div className="grid gap-1">
               <CardTitle>Schedule Overview</CardTitle>
-              <CardDescription>Your next confirmed medical visits.</CardDescription>
+              <CardDescription>Your next medical consultations and follow-ups.</CardDescription>
             </div>
             <Button asChild size="sm" className="ml-auto gap-1">
-              <Link href="/appointments">Manage All<ArrowUpRight className="h-4 w-4" /></Link>
+              <Link href="/appointments">Manage Schedule<ArrowUpRight className="h-4 w-4" /></Link>
             </Button>
           </CardHeader>
           <CardContent>
             <Table>
-              <TableHeader><TableRow><TableHead>Provider</TableHead><TableHead>Department</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Healthcare Provider</TableHead><TableHead>Department</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
               <TableBody>
-                {userAppointments.slice(0, 3).map((appointment) => (
-                  <TableRow key={appointment.id}>
-                    <TableCell><div className="font-semibold text-primary">{appointment.doctor}</div></TableCell>
-                    <TableCell><Badge variant="outline">{appointment.department}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground">{appointment.date} @ {appointment.time}</TableCell>
+                {userAppointments.length > 0 ? (
+                  userAppointments.slice(0, 3).map((appointment) => (
+                    <TableRow key={appointment.id}>
+                      <TableCell><div className="font-semibold text-primary">{appointment.doctor}</div></TableCell>
+                      <TableCell><Badge variant="outline">{appointment.department}</Badge></TableCell>
+                      <TableCell className="text-muted-foreground">{appointment.date} @ {appointment.time}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-6 text-xs text-muted-foreground italic">
+                      No upcoming consultations scheduled.
+                    </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -464,23 +487,27 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
                 <p className="font-bold">{user.bloodGroup || 'A+'}</p>
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Contact</Label>
-                <p className="font-semibold">{user.contactNumber || '+91-XXXXX'}</p>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Contact Registry</Label>
+                <p className="font-semibold">{user.contactNumber || 'Not provided'}</p>
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Medical History</Label>
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Chronic Conditions</Label>
               <div className="flex flex-wrap gap-1.5">
-                {Array.isArray(user.selectedDiseases) && user.selectedDiseases.map((d: string) => (
-                  <Badge key={d} variant="secondary" className="text-[10px] py-0">{d}</Badge>
-                ))}
+                {Array.isArray(user.selectedDiseases) && user.selectedDiseases.length > 0 ? (
+                  user.selectedDiseases.map((d: string) => (
+                    <Badge key={d} variant="secondary" className="text-[10px] py-0">{d}</Badge>
+                  ))
+                ) : (
+                  <p className="text-[10px] italic text-muted-foreground">No chronic conditions listed.</p>
+                )}
               </div>
             </div>
           </CardContent>
           <CardFooter>
              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setShowProfileDialog(true)}>
-               Update Records & Identity
+               Synchronize Records & Identity
              </Button>
           </CardFooter>
         </Card>
@@ -489,8 +516,8 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-headline text-primary">Manage Medical Identity</DialogTitle>
-            <DialogDescription>Keep your health history and biometric identity current.</DialogDescription>
+            <DialogTitle className="text-2xl font-headline text-primary">Synchronize Medical Identity</DialogTitle>
+            <DialogDescription>Maintain your clinical history and biometric identity for secure access.</DialogDescription>
           </DialogHeader>
           <ProfileEditForm 
             user={user} 
@@ -514,34 +541,40 @@ export default function DashboardPage() {
   }, []);
 
   const handleUpdate = (updatedUser: any) => {
+    // Save to active session
     setStorageItem('currentUser', updatedUser);
     setUser(updatedUser);
     
+    // Synchronize to the master registry (patients or doctors)
     const collectionName = updatedUser.role === 'doctor' ? 'doctors' : 'patients';
     const items = getStorageItem<any[]>(collectionName, []);
     const idx = items.findIndex(i => i.id === updatedUser.id);
     if (idx > -1) {
       items[idx] = updatedUser;
       setStorageItem(collectionName, items);
+    } else {
+      // If not found (e.g., initial registration without registry entry), add it
+      setStorageItem(collectionName, [...items, updatedUser]);
     }
 
+    // Create a clinical update notification
     const notifications = getStorageItem<any[]>('notifications', []);
     setStorageItem('notifications', [{
       id: crypto.randomUUID(),
-      title: 'Profile Synchronized',
-      description: 'Your clinical identity and contact records have been updated securely.',
+      title: 'Clinical Profile Synchronized',
+      description: 'Your contact information and biometric identity have been updated successfully.',
       time: format(new Date(), 'h:mm a'),
       type: 'profile',
       read: false
     }, ...notifications]);
 
-    toast({ title: "Clinical Update Success", description: "Your profile has been saved to the database." });
+    toast({ title: "Clinical Synchronization Success", description: "Your clinical records have been updated in real-time." });
   };
 
   if (!user) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground animate-pulse font-medium">Loading clinical environment...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Synchronizing clinical environment...</p>
       </div>
     );
   }

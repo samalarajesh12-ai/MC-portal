@@ -46,7 +46,6 @@ import {
 import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 const paymentMethodIcons = {
     'Debit Card': <CreditCard className="h-4 w-4" />,
@@ -88,7 +87,7 @@ export default function BillsPage() {
     
     toast({
       title: "Bill Updated",
-      description: `Payment details for ${editingBill.service} synchronized.`,
+      description: `Payment details for ${editingBill.service} synchronized correctly in local storage.`,
     });
   };
 
@@ -134,11 +133,11 @@ export default function BillsPage() {
       let currentY = 105;
       if (bill.surgicals && bill.surgicals.length > 0) {
         doc.setFont(undefined, 'bold');
-        doc.text('Surgicals & Consumables:', 20, currentY);
+        doc.text('Surgicals & Consumables Logged:', 20, currentY);
         doc.setFont(undefined, 'normal');
         currentY += 8;
         bill.surgicals.forEach((item: any) => {
-          doc.text(`- ${item.name} (Qty: ${item.count})`, 25, currentY);
+          doc.text(`- ${item.name} (Quantity: ${item.count})`, 25, currentY);
           currentY += 6;
         });
       }
@@ -167,19 +166,19 @@ export default function BillsPage() {
       doc.text(`Payment Method: ${bill.paymentMethod}`, 20, currentY);
       if (bill.paymentDetails) {
         currentY += 6;
-        doc.text(`Details: ${bill.paymentDetails}`, 20, currentY);
+        doc.text(`Split/Notes: ${bill.paymentDetails}`, 20, currentY);
       }
 
       // Footer
       doc.setFontSize(8);
       doc.setTextColor(150);
-      doc.text('This is a computer-generated invoice and does not require a physical signature.', 105, 280, { align: 'center' });
+      doc.text('This is a professional computer-generated invoice from Maruthi Clinic Portal.', 105, 280, { align: 'center' });
 
-      doc.save(`Invoice_${bill.id.substring(0, 8)}.pdf`);
+      doc.save(`Invoice_${bill.service.replace(/\s/g, '_')}_${bill.id.substring(0, 4)}.pdf`);
       
       toast({
-        title: "Download Complete",
-        description: `Invoice for ${bill.service} saved successfully.`,
+        title: "Invoice Downloaded",
+        description: `Financial record for ${bill.service} saved.`,
       });
     } catch (error) {
       console.error('PDF Generation Error:', error);
@@ -203,14 +202,14 @@ export default function BillsPage() {
         <div>
           <h1 className="text-3xl font-bold font-headline text-primary flex items-center gap-2">
             <Receipt className="h-8 w-8" />
-            Medical Bills
+            Medical Billing
           </h1>
-          <p className="text-muted-foreground">Manage surgical details, taxes (2.5% GST), and payment splits.</p>
+          <p className="text-muted-foreground">Manage surgical registry, taxes (2.5% GST), and split payments.</p>
         </div>
         <div className="relative max-w-sm w-full">
            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
            <Input 
-             placeholder="Search clinical services..." 
+             placeholder="Search medical services..." 
              className="pl-8" 
              value={searchTerm}
              onChange={(e) => setSearchTerm(e.target.value)}
@@ -220,9 +219,9 @@ export default function BillsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Clinical Billing History</CardTitle>
+          <CardTitle>Clinical Transaction History</CardTitle>
           <CardDescription>
-            Grand totals include a statutory clinical GST of 2.5%.
+            All totals are calculated including a statutory clinical GST of 2.5%.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -236,7 +235,7 @@ export default function BillsPage() {
                 <TableHead>GST (2.5%)</TableHead>
                 <TableHead>Total</TableHead>
                 <TableHead>Method</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -297,34 +296,36 @@ export default function BillsPage() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-3">
                               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                                <Activity className="h-3 w-3" /> Medical Surgicals & Consumables
+                                <Activity className="h-3 w-3" /> Surgical Consumables & Item Counts
                               </h4>
                               {bill.surgicals && bill.surgicals.length > 0 ? (
                                 <div className="space-y-2">
                                   {bill.surgicals.map((item: any, idx: number) => (
                                     <div key={idx} className="flex justify-between items-center bg-card p-2 rounded border border-primary/5">
                                       <span className="text-sm font-medium">{item.name}</span>
-                                      <Badge variant="secondary" className="bg-primary/5 text-primary">Count: {item.count}</Badge>
+                                      <Badge variant="secondary" className="bg-primary/5 text-primary">Qty: {item.count}</Badge>
                                     </div>
                                   ))}
                                 </div>
                               ) : (
-                                <p className="text-xs italic text-muted-foreground">No specific surgical items logged for this visit.</p>
+                                <p className="text-xs italic text-muted-foreground">No granular surgical log available for this entry.</p>
                               )}
                             </div>
                             <div className="bg-card p-4 rounded-lg border space-y-3 shadow-inner">
-                               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Summary</h4>
+                               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Payment Summary Audit</h4>
                                <div className="space-y-1.5">
                                  <div className="flex justify-between text-sm">
                                    <span>Status</span>
                                    <Badge className="bg-green-100 text-green-700">{bill.status}</Badge>
                                  </div>
                                  <div className="flex justify-between text-sm">
-                                   <span>Method</span>
+                                   <span>Payment Method</span>
                                    <span className="font-semibold">{bill.paymentMethod}</span>
                                  </div>
                                  {bill.paymentDetails && (
-                                   <p className="text-[10px] text-muted-foreground pt-1 border-t italic">{bill.paymentDetails}</p>
+                                   <div className="mt-2 p-2 bg-muted rounded text-[10px] italic">
+                                     <strong>Split Transaction:</strong> {bill.paymentDetails}
+                                   </div>
                                  )}
                                </div>
                                <Button 
@@ -334,7 +335,7 @@ export default function BillsPage() {
                                  onClick={() => downloadBillPDF(bill)}
                                 >
                                  {isGenerating === bill.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-                                 Download PDF Invoice
+                                 Generate PDF Invoice
                                </Button>
                             </div>
                           </div>
@@ -352,20 +353,20 @@ export default function BillsPage() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle>Update Payment Method</DialogTitle>
+            <DialogTitle>Modify Payment Method & Split</DialogTitle>
             <DialogDescription>
-              Adjust clinical payment method, including support for split transactions.
+              Adjust clinical payment method or log split transaction details (e.g., partial Cash/UPI).
             </DialogDescription>
           </DialogHeader>
           {editingBill && (
             <div className="space-y-6 py-4">
               <div className="space-y-2">
-                <Label>Service Reference</Label>
+                <Label>Clinical Service</Label>
                 <Input value={editingBill.service} disabled className="bg-muted" />
               </div>
               
               <div className="space-y-2">
-                <Label>Payment Method</Label>
+                <Label>Current Method</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {Object.keys(paymentMethodIcons).map((method) => (
                     <Button 
@@ -382,21 +383,21 @@ export default function BillsPage() {
                 </div>
               </div>
 
-              {editingBill.paymentMethod === 'Split Payment' && (
+              {(editingBill.paymentMethod === 'Split Payment' || editingBill.paymentMethod === 'Cash' || editingBill.paymentMethod === 'UPI') && (
                 <div className="space-y-3 p-3 bg-primary/5 rounded-md border border-primary/20">
-                   <Label className="text-xs font-bold text-primary">Split Transaction Details</Label>
+                   <Label className="text-xs font-bold text-primary">Transaction Breakdown (Optional)</Label>
                    <Textarea 
-                     placeholder="e.g., Rs 500 paid in Cash, Rs 2000 via UPI."
+                     placeholder="e.g., Rs 1000 via Cash, remaining Rs 1500 via GPay."
                      value={editingBill.paymentDetails || ''}
                      onChange={(e) => setEditingBill({...editingBill, paymentDetails: e.target.value})}
-                     className="min-h-[80px]"
+                     className="min-h-[80px] text-xs"
                    />
                 </div>
               )}
             </div>
           )}
           <DialogFooter>
-            <Button className="w-full" onClick={handleUpdateBill}>Save Billing Update</Button>
+            <Button className="w-full" onClick={handleUpdateBill}>Synchronize Bill Update</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
