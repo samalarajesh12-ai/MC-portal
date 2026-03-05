@@ -161,6 +161,36 @@ export const initialAppointments = [
     time: '03:00 PM',
     status: 'Confirmed',
   },
+  {
+    id: 'app8',
+    doctor: 'Dr. Raj Kumar',
+    doctorId: 'dr-raj',
+    patientId: null, // Shared for any patient dashboard
+    department: 'Cardiology',
+    date: '2025-03-25',
+    time: '10:30 AM',
+    status: 'Confirmed',
+  },
+  {
+    id: 'app9',
+    doctor: 'Dr. Ramesh',
+    doctorId: 'dr-ramesh',
+    patientId: null,
+    department: 'General Surgery',
+    date: '2025-03-28',
+    time: '01:00 PM',
+    status: 'Confirmed',
+  },
+  {
+    id: 'app10',
+    doctor: 'Dr. Kumar',
+    doctorId: 'dr-kumar',
+    patientId: null,
+    department: 'Pediatrics',
+    date: '2025-04-02',
+    time: '04:30 PM',
+    status: 'Confirmed',
+  },
 ];
 
 export const initialDoctors = [
@@ -213,7 +243,7 @@ export const initialDoctors = [
 export const initialMedications = [
   {
     id: 'med1',
-    patientId: 'p1',
+    patientId: null,
     name: 'Lisinopril',
     dosage: '10mg',
     frequency: 'Once a day',
@@ -222,12 +252,30 @@ export const initialMedications = [
   },
   {
     id: 'med2',
-    patientId: 'p2',
+    patientId: null,
     name: 'Metformin',
     dosage: '500mg',
     frequency: 'Twice a day',
     refillsLeft: 0,
     lastRefill: '2024-06-15',
+  },
+  {
+    id: 'med3',
+    patientId: null,
+    name: 'Atorvastatin',
+    dosage: '20mg',
+    frequency: 'Once at night',
+    refillsLeft: 0,
+    lastRefill: '2024-08-01',
+  },
+  {
+    id: 'med4',
+    patientId: null,
+    name: 'Amlodipine',
+    dosage: '5mg',
+    frequency: 'Once daily',
+    refillsLeft: 1,
+    lastRefill: '2024-08-20',
   },
 ];
 
