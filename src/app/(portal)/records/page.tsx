@@ -1,3 +1,7 @@
+
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -25,12 +29,37 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { labResults, medicalHistory } from '@/lib/data';
+import { getStorageItem, seedStorage } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FileDown } from 'lucide-react';
 
 export default function RecordsPage() {
+  const [medicalHistory, setMedicalHistory] = useState<any>(null);
+  const [labResults, setLabResults] = useState<any[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    seedStorage();
+    const history = getStorageItem<any>('medicalHistory', {
+      allergies: [],
+      surgeries: [],
+      conditions: []
+    });
+    const labs = getStorageItem<any[]>('labResults', []);
+    setMedicalHistory(history);
+    setLabResults(labs);
+  }, []);
+
+  if (!isMounted || !medicalHistory) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <p className="text-muted-foreground animate-pulse font-medium">Synchronizing medical records...</p>
+      </div>
+    );
+  }
+
   return (
     <Tabs defaultValue="history">
       <div className="flex items-center justify-between">
@@ -59,12 +88,16 @@ export default function RecordsPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <ul className="list-disc space-y-2 pl-6">
-                    {medicalHistory.conditions.map((condition) => (
-                      <li key={condition.name}>
-                        <span className="font-medium">{condition.name}</span> -
-                        Diagnosed in {condition.diagnosed}
-                      </li>
-                    ))}
+                    {medicalHistory.conditions && medicalHistory.conditions.length > 0 ? (
+                      medicalHistory.conditions.map((condition: any) => (
+                        <li key={condition.name}>
+                          <span className="font-medium">{condition.name}</span> -
+                          Diagnosed in {condition.diagnosed}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-muted-foreground italic list-none">No chronic conditions recorded.</li>
+                    )}
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -74,12 +107,16 @@ export default function RecordsPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                 <ul className="list-disc space-y-2 pl-6">
-                    {medicalHistory.allergies.map((allergy) => (
-                      <li key={allergy.name}>
-                        <span className="font-medium">{allergy.name}</span> -
-                        Reaction: {allergy.reaction}
-                      </li>
-                    ))}
+                    {medicalHistory.allergies && medicalHistory.allergies.length > 0 ? (
+                      medicalHistory.allergies.map((allergy: any) => (
+                        <li key={allergy.name}>
+                          <span className="font-medium">{allergy.name}</span> -
+                          Reaction: {allergy.reaction}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-muted-foreground italic list-none">No known allergies.</li>
+                    )}
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -89,12 +126,16 @@ export default function RecordsPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                 <ul className="list-disc space-y-2 pl-6">
-                    {medicalHistory.surgeries.map((surgery) => (
-                      <li key={surgery.name}>
-                        <span className="font-medium">{surgery.name}</span> -
-                        {surgery.date}
-                      </li>
-                    ))}
+                    {medicalHistory.surgeries && medicalHistory.surgeries.length > 0 ? (
+                      medicalHistory.surgeries.map((surgery: any) => (
+                        <li key={surgery.name}>
+                          <span className="font-medium">{surgery.name}</span> -
+                          {surgery.date}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-muted-foreground italic list-none">No past surgical history recorded.</li>
+                    )}
                   </ul>
                 </AccordionContent>
               </AccordionItem>
@@ -107,7 +148,7 @@ export default function RecordsPage() {
           <CardHeader>
             <CardTitle>Lab Results</CardTitle>
             <CardDescription>
-              Your recent lab test results.
+              Your recent clinical laboratory reports.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -120,25 +161,31 @@ export default function RecordsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {labResults.map((result) => (
-                  <TableRow key={result.id}>
-                    <TableCell className="font-medium">
-                      {result.testName}
-                    </TableCell>
-                    <TableCell>{result.date}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          result.status === 'Normal'
-                            ? 'secondary'
-                            : 'destructive'
-                        }
-                      >
-                        {result.status}
-                      </Badge>
-                    </TableCell>
+                {labResults && labResults.length > 0 ? (
+                  labResults.map((result) => (
+                    <TableRow key={result.id}>
+                      <TableCell className="font-medium">
+                        {result.testName}
+                      </TableCell>
+                      <TableCell>{result.date}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            result.status === 'Normal'
+                              ? 'secondary'
+                              : 'destructive'
+                          }
+                        >
+                          {result.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-10 text-muted-foreground italic">No lab results found in clinical record.</TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </CardContent>
