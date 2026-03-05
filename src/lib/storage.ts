@@ -1,16 +1,9 @@
 
 /**
  * Utility functions for interacting with clinical data.
- * Migrated to Firestore for cloud-sync, but maintaining localStorage fallback for session-only metadata.
+ * v1.3.0: All core clinical data has been migrated to Firebase Firestore.
+ * localStorage is now only used for non-critical session metadata.
  */
-import { 
-  initialAppointments, 
-  initialMedications, 
-  initialBills, 
-  initialLabResults, 
-  initialMedicalHistory,
-  initialDoctors 
-} from './data';
 
 export const getStorageItem = <T>(key: string, defaultValue: T): T => {
   if (typeof window === 'undefined') return defaultValue;
@@ -39,17 +32,15 @@ export const removeStorageItem = (key: string): void => {
 
 /**
  * Historical seed function.
- * Cloud sync is now handled primarily via direct Firestore hooks in components.
+ * v1.3.0: Clinical data is now prioritized via Firestore.
  */
 export const seedStorage = () => {
   if (typeof window === 'undefined') return;
 
-  const SEED_KEY = 'maruthi_clinic_v1.3.0_cloud_sync_ready';
+  const SEED_KEY = 'maruthi_clinic_v1.3.0_cloud_sync_active';
 
   if (!localStorage.getItem(SEED_KEY)) {
-    // We maintain localStorage for local session caching if needed, 
-    // but the app now prioritizes Firestore for multi-device visibility.
     localStorage.setItem(SEED_KEY, 'true');
-    console.log("Maruthi Clinic: Portal optimized for cloud-sync 2026.");
+    console.log("Maruthi Clinic: Portal successfully migrated to Firebase Cloud Sync.");
   }
 };
