@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -20,45 +20,37 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CalendarCheck, Clock, CheckCircle2, XCircle } from 'lucide-react';
-import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
-import { format, parseISO, compareAsc } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 
 export default function DoctorAppointmentsPage() {
   const { toast } = useToast();
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [doctor, setDoctor] = useState<any>(null);
+  const { user: doctorUser } = useUser();
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    seedStorage();
-    const currentUser = getStorageItem<any>('currentUser', null);
-    setDoctor(currentUser);
-    
-    const allAppointments = getStorageItem<any[]>('appointments', []);
-    // Filter appointments for the current doctor
-    const doctorAppointments = allAppointments.filter(app => 
-      app.doctorId === currentUser?.id || app.doctor === `Dr. ${currentUser?.lastName}`
-    );
-    
-    setAppointments(doctorAppointments.sort((a, b) => compareAsc(parseISO(a.date), parseISO(b.date))));
-  }, []);
+  const appointmentsQuery = useMemoFirebase(() => 
+    doctorUser ? query(
+      collection(firestore, 'appointments'), 
+      where('doctorId', '==', doctorUser.uid),
+      orderBy('date', 'asc')
+    ) : null, 
+    [firestore, doctorUser]
+  );
+  const { data: appointments = [], isLoading } = useCollection(appointmentsQuery);
 
   const handleUpdateStatus = (id: string, newStatus: string) => {
-    const allAppointments = getStorageItem<any[]>('appointments', []);
-    const updated = allAppointments.map(app => app.id === id ? { ...app, status: newStatus } : app);
-    setStorageItem('appointments', updated);
-    
-    // Refresh local list
-    const doctorAppointments = updated.filter(app => 
-      app.doctorId === doctor?.id || app.doctor === `Dr. ${doctor?.lastName}`
-    );
-    setAppointments(doctorAppointments.sort((a, b) => compareAsc(parseISO(a.date), parseISO(b.date))));
+    const appRef = doc(firestore, 'appointments', id);
+    updateDocumentNonBlocking(appRef, { status: newStatus });
 
     toast({
       title: "Appointment Updated",
-      description: `Visit status changed to ${newStatus}.`,
+      description: `Visit status changed to ${newStatus} in the clinical cloud.`,
     });
   };
+
+  if (isLoading) return <div className="text-center py-20 animate-pulse">Syncing Doctor Schedule...</div>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -68,14 +60,14 @@ export default function DoctorAppointmentsPage() {
             <CalendarCheck className="h-8 w-8" />
             Appointment Scheduling
           </h1>
-          <p className="text-muted-foreground">Manage your daily clinical visits and patient consultations.</p>
+          <p className="text-muted-foreground">Manage clinical visits and consultations. Synced across all your devices.</p>
         </div>
       </div>
 
       <Card className="border-primary/10">
         <CardHeader>
           <CardTitle>Upcoming Consultations</CardTitle>
-          <CardDescription>Chronological overview of your patient bookings.</CardDescription>
+          <CardDescription>Cloud-synced overview of your bookings.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -89,11 +81,11 @@ export default function DoctorAppointmentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {appointments.length > 0 ? (
+              {appointments && appointments.length > 0 ? (
                 appointments.map((app) => (
                   <TableRow key={app.id}>
-                    <TableCell className="font-bold">{app.patient || 'Unknown Patient'}</TableCell>
-                    <TableCell>{format(parseISO(app.date), 'MMM do, yyyy')}</TableCell>
+                    <TableCell className="font-bold">{app.patientName || 'Clinical Patient'}</TableCell>
+                    <TableCell>{app.date ? format(parseISO(app.date), 'MMM do, yyyy') : 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <Clock className="h-3 w-3 text-muted-foreground" />
@@ -134,7 +126,7 @@ export default function DoctorAppointmentsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">
-                    No clinical appointments scheduled for your profile.
+                    No clinical appointments found in your cloud registry.
                   </TableCell>
                 </TableRow>
               )}

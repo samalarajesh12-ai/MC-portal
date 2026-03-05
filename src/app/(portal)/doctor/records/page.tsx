@@ -27,49 +27,30 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ClipboardList, Search, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { getStorageItem, seedStorage } from '@/lib/storage';
+import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 
 function RecordsContent() {
   const searchParams = useSearchParams();
   const initialPatientId = searchParams.get('patientId');
+  const firestore = useFirestore();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [patients, setPatients] = useState<any[]>([]);
-  const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  const [medicalHistory, setMedicalHistory] = useState<any>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(initialPatientId);
 
-  useEffect(() => {
-    seedStorage();
-    const storedPatients = getStorageItem<any[]>('patients', []);
-    setPatients(storedPatients);
-    
-    if (initialPatientId) {
-      const p = storedPatients.find(p => p.id === initialPatientId);
-      if (p) {
-        setSelectedPatient(p);
-        // In a real app, this would be a per-patient query. 
-        // For this MVP, we use the global history if none exists for the patient.
-        const history = getStorageItem<any>(`medicalHistory_${p.id}`, getStorageItem('medicalHistory', {
-          allergies: [],
-          surgeries: [],
-          conditions: []
-        }));
-        setMedicalHistory(history);
-      }
-    }
-  }, [initialPatientId]);
+  const patientsQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'patients'), orderBy('firstName', 'asc')), 
+    [firestore]
+  );
+  const { data: patients = [] } = useCollection(patientsQuery);
 
-  const handleSelectPatient = (patient: any) => {
-    setSelectedPatient(patient);
-    const history = getStorageItem<any>(`medicalHistory_${patient.id}`, getStorageItem('medicalHistory', {
-      allergies: [],
-      surgeries: [],
-      conditions: []
-    }));
-    setMedicalHistory(history);
-  };
+  const selectedPatientRef = useMemoFirebase(() => 
+    selectedPatientId ? doc(firestore, 'patients', selectedPatientId) : null, 
+    [firestore, selectedPatientId]
+  );
+  const { data: selectedPatient } = useDoc(selectedPatientRef);
 
-  const filteredPatients = patients.filter(p => 
+  const filteredPatients = (patients || []).filter(p => 
     `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -81,7 +62,7 @@ function RecordsContent() {
             <ClipboardList className="h-8 w-8" />
             Medical Records Access
           </h1>
-          <p className="text-muted-foreground">Search patients and review comprehensive clinical histories.</p>
+          <p className="text-muted-foreground">Comprehensive cloud-synced patient history.</p>
         </div>
       </div>
 
@@ -104,9 +85,9 @@ function RecordsContent() {
               {filteredPatients.map((p) => (
                 <button
                   key={p.id}
-                  onClick={() => handleSelectPatient(p)}
+                  onClick={() => setSelectedPatientId(p.id)}
                   className={`w-full text-left p-3 rounded-md transition-colors border ${
-                    selectedPatient?.id === p.id 
+                    selectedPatientId === p.id 
                       ? 'bg-primary/10 border-primary text-primary font-bold' 
                       : 'hover:bg-muted border-transparent'
                   }`}
@@ -115,9 +96,6 @@ function RecordsContent() {
                   <div className="text-[10px] opacity-60 uppercase">{p.bloodGroup || 'A+'} Blood Group</div>
                 </button>
               ))}
-              {filteredPatients.length === 0 && (
-                <p className="text-center text-xs text-muted-foreground italic py-4">No patients found.</p>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -137,33 +115,40 @@ function RecordsContent() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
-                <Accordion type="multiple" defaultValue={['history']}>
+                <Accordion type="multiple" defaultValue={['history', 'allergies']}>
                   <AccordionItem value="history">
-                    <AccordionTrigger className="text-base font-bold">Chronic Conditions</AccordionTrigger>
+                    <AccordionTrigger className="text-base font-bold">Health History</AccordionTrigger>
                     <AccordionContent>
-                      <div className="flex flex-wrap gap-2">
-                        {medicalHistory?.conditions?.map((c: any) => (
-                          <Badge key={c.name} variant="secondary" className="px-3 py-1">
-                            {c.name} (Since {c.diagnosed})
-                          </Badge>
-                        ))}
-                        {(!medicalHistory?.conditions || medicalHistory.conditions.length === 0) && (
-                          <p className="text-xs text-muted-foreground italic">No chronic conditions recorded.</p>
-                        )}
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                          {selectedPatient.selectedDiseases?.map((d: string) => (
+                            <Badge key={d} variant="secondary">{d}</Badge>
+                          ))}
+                        </div>
+                        <div className="p-3 bg-muted rounded-md text-sm">
+                           <p className="font-semibold text-xs text-muted-foreground uppercase mb-1">Clinical Notes</p>
+                           {selectedPatient.preExistingConditions || 'No detailed history available.'}
+                        </div>
                       </div>
                     </AccordionContent>
                   </AccordionItem>
-                  <AccordionItem value="allergies">
-                    <AccordionTrigger className="text-base font-bold">Clinical Allergies</AccordionTrigger>
+                  <AccordionItem value="emergency">
+                    <AccordionTrigger className="text-base font-bold">Emergency Contacts</AccordionTrigger>
                     <AccordionContent>
-                       <Table>
-                         <TableHeader><TableRow><TableHead>Allergen</TableHead><TableHead>Reaction</TableHead></TableRow></TableHeader>
-                         <TableBody>
-                           {medicalHistory?.allergies?.map((a: any) => (
-                             <TableRow key={a.name}><TableCell className="font-medium">{a.name}</TableCell><TableCell>{a.reaction}</TableCell></TableRow>
-                           ))}
-                         </TableBody>
-                       </Table>
+                       <div className="grid grid-cols-2 gap-4 text-sm">
+                         <div>
+                            <p className="text-xs text-muted-foreground font-bold">Contact Name</p>
+                            <p>{selectedPatient.emergencyContactName || 'N/A'}</p>
+                         </div>
+                         <div>
+                            <p className="text-xs text-muted-foreground font-bold">Relation</p>
+                            <p>{selectedPatient.emergencyContactRelation || 'N/A'}</p>
+                         </div>
+                         <div className="col-span-2">
+                            <p className="text-xs text-muted-foreground font-bold">Phone</p>
+                            <p>{selectedPatient.emergencyContactPhone || 'N/A'}</p>
+                         </div>
+                       </div>
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
@@ -172,8 +157,8 @@ function RecordsContent() {
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-12 text-center">
               <Search className="h-12 w-12 opacity-20 mb-4" />
-              <p className="font-medium">Select a patient from the list</p>
-              <p className="text-sm">Review their complete medical history and records.</p>
+              <p className="font-medium">Select a patient from the registry</p>
+              <p className="text-sm">Review their comprehensive cloud-synced history.</p>
             </div>
           )}
         </Card>
@@ -184,7 +169,7 @@ function RecordsContent() {
 
 export default function DoctorRecordsAccessPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center animate-pulse">Loading Clinical Records...</div>}>
+    <Suspense fallback={<div className="p-8 text-center animate-pulse">Synchronizing Cloud Records...</div>}>
       <RecordsContent />
     </Suspense>
   );

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Bell, Search, LogOut, Stethoscope, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import {
@@ -33,80 +33,31 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { navItems, doctorNavItems } from '@/lib/data';
 import NavItems from './_components/nav-items';
-import { getStorageItem, setStorageItem, removeStorageItem, seedStorage } from '@/lib/storage';
-import { format, isPast, parseISO } from 'date-fns';
-import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc, orderBy } from 'firebase/firestore';
 
-function Header({ user }: { user: any }) {
-  const { toast } = useToast();
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+function Header() {
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    const syncNotifications = () => {
-      const stored = getStorageItem<any[]>('notifications', []);
-      setNotifications(stored);
-      setUnreadCount(stored.filter(n => !n.read).length);
-    };
-
-    syncNotifications();
-    const interval = setInterval(syncNotifications, 5000);
-
-    const checkAppointments = () => {
-      const appointments = getStorageItem<any[]>('appointments', []);
-      const notified = getStorageItem<string[]>('notified_appointments', []);
-
-      appointments.forEach(app => {
-        const appDateStr = app.date && app.time ? `${app.date}T${convertTo24Hour(app.time)}` : null;
-        if (!appDateStr) return;
-        
-        const appDate = parseISO(appDateStr);
-        if (isPast(appDate) && !notified.includes(app.id)) {
-          const newNotif = {
-            id: crypto.randomUUID(),
-            title: 'Appointment Time Reached',
-            description: `A clinical session with ${app.doctor} is starting now.`,
-            time: format(new Date(), 'h:mm a'),
-            type: 'alert',
-            read: false
-          };
-          
-          const currentNotifs = getStorageItem<any[]>('notifications', []);
-          setStorageItem('notifications', [newNotif, ...currentNotifs]);
-          setStorageItem('notified_appointments', [...notified, app.id]);
-          
-          toast({
-            title: "Appointment Reminder",
-            description: "A clinical session is scheduled for now.",
-          });
-        }
-      });
-    };
-
-    const appInterval = setInterval(checkAppointments, 30000);
-
-    return () => {
-      clearInterval(interval);
-      clearInterval(appInterval);
-    };
-  }, [toast]);
-
-  const convertTo24Hour = (timeStr: string) => {
-    if (!timeStr) return '00:00';
-    const parts = timeStr.split(' ');
-    if (parts.length < 2) return timeStr;
-    const [time, modifier] = parts;
-    let [hours, minutes] = time.split(':');
-    if (hours === '12') hours = '00';
-    if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
-    return `${hours.padStart(2, '0')}:${minutes}`;
-  };
+  const notificationsQuery = useMemoFirebase(() => 
+    user ? query(
+      collection(firestore, 'notifications'), 
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc')
+    ) : null, 
+    [firestore, user]
+  );
+  const { data: notifications = [] } = useCollection(notificationsQuery);
+  const unreadCount = notifications?.filter((n: any) => !n.read).length || 0;
 
   const markAllAsRead = () => {
-    const updated = notifications.map(n => ({ ...n, read: true }));
-    setStorageItem('notifications', updated);
-    setNotifications(updated);
-    setUnreadCount(0);
+    notifications?.forEach((n: any) => {
+      if (!n.read) {
+        const notifRef = doc(firestore, 'notifications', n.id);
+        updateDocumentNonBlocking(notifRef, { read: true });
+      }
+    });
   };
 
   return (
@@ -118,7 +69,7 @@ function Header({ user }: { user: any }) {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder={user?.role === 'doctor' ? "Search clinical cases..." : "Search medical records..."}
+              placeholder="Search clinical cloud..."
               className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
             />
           </div>
@@ -141,7 +92,7 @@ function Header({ user }: { user: any }) {
         </PopoverTrigger>
         <PopoverContent className="w-80 p-0" align="end">
           <div className="flex items-center justify-between p-4 border-b">
-            <h4 className="font-semibold text-sm">Clinical Notifications</h4>
+            <h4 className="font-semibold text-sm">Cloud Notifications</h4>
             {unreadCount > 0 && (
               <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={markAllAsRead}>
                 Mark all as read
@@ -149,9 +100,9 @@ function Header({ user }: { user: any }) {
             )}
           </div>
           <ScrollArea className="h-80">
-            {notifications.length > 0 ? (
+            {notifications && notifications.length > 0 ? (
               <div className="flex flex-col">
-                {notifications.map((notif) => (
+                {notifications.map((notif: any) => (
                   <div 
                     key={notif.id} 
                     className={`flex gap-3 p-4 border-b last:border-0 hover:bg-muted/50 transition-colors ${!notif.read ? 'bg-primary/5' : ''}`}
@@ -172,7 +123,7 @@ function Header({ user }: { user: any }) {
             ) : (
               <div className="flex flex-col items-center justify-center h-full py-12 text-muted-foreground">
                 <Bell className="h-10 w-10 opacity-20 mb-2" />
-                <p className="text-sm italic">No new clinical updates.</p>
+                <p className="text-sm italic">No cloud updates.</p>
               </div>
             )}
           </ScrollArea>
@@ -183,24 +134,18 @@ function Header({ user }: { user: any }) {
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="icon" className="rounded-full">
             <Avatar className="h-8 w-8">
-              {user?.faceImage && (
-                <AvatarImage
-                  src={user.faceImage}
-                  alt={user.firstName}
-                />
-              )}
-              <AvatarFallback>{user?.firstName?.charAt(0) || 'U'}</AvatarFallback>
+              <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>
-            {user?.role === 'doctor' ? `Dr. ${user.lastName || user.firstName}` : user?.firstName}
-            <p className="text-xs text-muted-foreground font-normal">{user?.role}</p>
+            {user?.displayName || 'User'}
+            <p className="text-xs text-muted-foreground font-normal">Cloud Profile</p>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/" onClick={() => removeStorageItem('currentUser')}>
+            <Link href="/">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Logout</span>
             </Link>
@@ -216,15 +161,18 @@ export default function PortalLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, setUser] = useState<any>(null);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    seedStorage();
-    const currentUser = getStorageItem('currentUser', null);
-    setUser(currentUser);
-  }, []);
+  // Determine role from Firestore profile
+  const patientRef = useMemoFirebase(() => user ? doc(firestore, 'patients', user.uid) : null, [firestore, user]);
+  const doctorRef = useMemoFirebase(() => user ? doc(firestore, 'doctors', user.uid) : null, [firestore, user]);
+  
+  const { data: patientProfile } = useCollection(user ? query(collection(firestore, 'patients'), where('id', '==', user.uid)) : null);
+  const { data: doctorProfile } = useCollection(user ? query(collection(firestore, 'doctors'), where('id', '==', user.uid)) : null);
 
-  const activeNavItems = user?.role === 'doctor' ? doctorNavItems : navItems;
+  const role = doctorProfile && doctorProfile.length > 0 ? 'doctor' : 'patient';
+  const activeNavItems = role === 'doctor' ? doctorNavItems : navItems;
 
   return (
     <SidebarProvider>
@@ -244,7 +192,7 @@ export default function PortalLayout({
         </SidebarContent>
       </Sidebar>
       <SidebarInset className="flex flex-col">
-        <Header user={user} />
+        <Header />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>

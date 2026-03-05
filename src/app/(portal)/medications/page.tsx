@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
@@ -18,55 +19,49 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { Pill, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
 
 export default function MedicationsPage() {
   const { toast } = useToast();
-  const [medications, setMedications] = useState<any[]>([]);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    seedStorage();
-    const storedMedications = getStorageItem<any[]>('medications', []);
-    setMedications(storedMedications);
-  }, []);
+  const medicationsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'medications'), where('patientId', '==', user.uid)) : null, 
+    [firestore, user]
+  );
+  const { data: medications = [], isLoading } = useCollection(medicationsQuery);
 
   const handleRequestRefill = (med: any) => {
-    // 1. Update medication state locally and in storage
-    const updatedMedications = medications.map(m => {
-      if (m.id === med.id) {
-        return { ...m, refillRequested: true };
-      }
-      return m;
-    });
-    setMedications(updatedMedications);
-    setStorageItem('medications', updatedMedications);
+    if (!user) return;
 
-    // 2. Create a notification
-    const notifications = getStorageItem<any[]>('notifications', []);
-    const newNotif = {
-      id: crypto.randomUUID(),
+    // 1. Update medication state in cloud
+    const medRef = doc(firestore, 'medications', med.id);
+    updateDocumentNonBlocking(medRef, { refillRequested: true });
+
+    // 2. Create a cloud notification
+    const notificationsRef = collection(firestore, 'notifications');
+    addDocumentNonBlocking(notificationsRef, {
+      userId: user.uid,
       title: 'Refill Requested',
-      description: `Your request for ${med.name} (${med.dosage}) has been submitted.`,
+      description: `Your request for ${med.name} (${med.dosage}) has been submitted to the cloud.`,
       time: format(new Date(), 'h:mm a'),
       type: 'refill',
-      read: false
-    };
-    setStorageItem('notifications', [newNotif, ...notifications]);
+      read: false,
+      createdAt: new Date().toISOString()
+    });
 
-    // 3. Show confirmation notification
     toast({
       title: "Refill Request Sent",
-      description: `Your request for ${med.name} has been sent to the clinic staff.`,
-      action: (
-        <div className="flex items-center bg-green-500/10 p-1 rounded">
-          <CheckCircle2 className="h-4 w-4 text-green-600" />
-        </div>
-      ),
+      description: `Your request for ${med.name} has been synchronized with the clinic staff.`,
     });
   };
+
+  if (isLoading) return <div className="text-center py-20 animate-pulse">Synchronizing Medications...</div>;
 
   return (
     <Card className="border-primary/10 shadow-sm">
@@ -78,7 +73,7 @@ export default function MedicationsPage() {
           <div>
             <CardTitle className="font-headline text-2xl">Medication Refills</CardTitle>
             <CardDescription>
-              Manage your current prescriptions and request clinical refills.
+              Manage your current prescriptions. All changes sync across your devices.
             </CardDescription>
           </div>
         </div>
@@ -95,7 +90,7 @@ export default function MedicationsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {medications.length > 0 ? (
+            {medications && medications.length > 0 ? (
               medications.map((med) => (
                 <TableRow key={med.id} className="hover:bg-muted/30 transition-colors">
                   <TableCell className="font-semibold text-primary">{med.name}</TableCell>
@@ -132,7 +127,7 @@ export default function MedicationsPage() {
             ) : (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">
-                  No medications found in your clinical record.
+                  No medications found in your clinical cloud record.
                 </TableCell>
               </TableRow>
             )}

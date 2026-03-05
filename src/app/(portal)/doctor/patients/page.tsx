@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -21,23 +21,26 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Users, Search, Eye, Phone } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { getStorageItem, seedStorage } from '@/lib/storage';
 import Link from 'next/link';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 export default function DoctorPatientsPage() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [patients, setPatients] = useState<any[]>([]);
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    seedStorage();
-    const storedPatients = getStorageItem<any[]>('patients', []);
-    setPatients(storedPatients);
-  }, []);
-
-  const filteredPatients = patients.filter(p => 
-    `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const patientsQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'patients'), orderBy('lastName', 'asc')), 
+    [firestore]
   );
+  const { data: patients = [], isLoading } = useCollection(patientsQuery);
+
+  const filteredPatients = (patients || []).filter(p => 
+    `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) return <div className="text-center py-20 animate-pulse">Syncing Patient Registry...</div>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -47,7 +50,7 @@ export default function DoctorPatientsPage() {
             <Users className="h-8 w-8" />
             Patient Management
           </h1>
-          <p className="text-muted-foreground">Manage your assigned patients and review their clinical status.</p>
+          <p className="text-muted-foreground">Manage assigned patients. Synced in real-time from the cloud.</p>
         </div>
       </div>
 
@@ -104,7 +107,7 @@ export default function DoctorPatientsPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">
-                    {patients.length === 0 ? "No patients registered in the system." : "No matching patients found."}
+                    No matching patients found in the cloud database.
                   </TableCell>
                 </TableRow>
               )}
