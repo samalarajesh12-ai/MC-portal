@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Stethoscope, ClipboardCheck, Camera, ShieldAlert, Check } from 'lucide-react';
+import { Stethoscope, ClipboardCheck, Camera, ShieldAlert, Check, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -43,7 +43,10 @@ const SPECIALTIES = [
   "Gynecology",
   "Radiology",
   "Anesthesiology",
-  "Emergency Medicine"
+  "Emergency Medicine",
+  "Internal Medicine",
+  "Urology",
+  "Pathology"
 ];
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -53,6 +56,7 @@ export default function DoctorRegisterPage() {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | undefined>(undefined);
   const [faceImage, setFaceImage] = useState<string | null>(null);
 
@@ -87,7 +91,7 @@ export default function DoctorRegisterPage() {
         toast({
             variant: 'destructive',
             title: 'Face Image Required',
-            description: 'Please capture a face image to complete registration.',
+            description: 'Please capture or upload a face image to complete registration.',
         });
         return;
     }
@@ -138,6 +142,18 @@ export default function DoctorRegisterPage() {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFaceImage(reader.result as string);
+        toast({ title: 'Image uploaded successfully!' });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
       <Link href="/" className="mb-8 flex items-center gap-2">
@@ -180,7 +196,7 @@ export default function DoctorRegisterPage() {
               </div>
                <div className="space-y-2">
                 <Label htmlFor="mobile">Mobile Number</Label>
-                <Input name="mobile" id="mobile" type="tel" placeholder="+1 (555) 123-4567" required />
+                <Input name="mobile" id="mobile" type="tel" placeholder="+91..." required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Work Email</Label>
@@ -239,20 +255,47 @@ export default function DoctorRegisterPage() {
             <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
                 <Label className="flex items-center gap-2 font-semibold">
                     <Camera className="h-5 w-5 text-primary"/>
-                    Biometric Registration
+                    Biometric Identity Registration
                 </Label>
-                <div className="relative flex items-center justify-center overflow-hidden rounded-md border-2 border-primary/20 bg-black/5">
-                    <video ref={videoRef} className="w-full max-w-sm aspect-video object-cover" autoPlay muted playsInline />
-                    <canvas ref={canvasRef} className="hidden"></canvas>
-                </div>
-                <div className="flex flex-col items-center gap-4 sm:flex-row justify-center">
-                    <Button type="button" onClick={captureFaceImage} disabled={hasCameraPermission !== true} variant="outline" className="border-primary text-primary hover:bg-primary/10">Capture Face Image</Button>
-                    {faceImage && (
-                        <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
-                           <Check className="h-5 w-5" />
-                           <span>Identity data secured</span>
+                <div className="flex flex-col gap-6 lg:flex-row items-start">
+                    <div className="relative flex flex-col items-center justify-center flex-1 w-full lg:w-auto">
+                        <div className="relative w-full aspect-video rounded-md border-2 border-primary/20 bg-black/5 overflow-hidden">
+                            <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                            <canvas ref={canvasRef} className="hidden"></canvas>
                         </div>
-                    )}
+                        <Button type="button" onClick={captureFaceImage} disabled={hasCameraPermission !== true} variant="outline" className="mt-4 w-full">Capture from Webcam</Button>
+                    </div>
+                    
+                    <div className="flex flex-col items-center justify-center flex-1 w-full lg:w-auto self-stretch gap-4 border-l pl-6 border-dashed border-primary/20">
+                        <div className="text-center space-y-2 w-full">
+                            <p className="text-sm font-medium text-muted-foreground">Or Upload Portrait</p>
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                ref={fileInputRef} 
+                                onChange={handleFileUpload}
+                            />
+                            <Button 
+                                type="button" 
+                                variant="secondary" 
+                                className="w-full gap-2"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <Upload className="h-4 w-4" /> Upload File
+                            </Button>
+                        </div>
+                        {faceImage && (
+                            <div className="mt-2 text-center">
+                                <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-primary mx-auto mb-2">
+                                    <img src={faceImage} alt="Identity Preview" className="h-full w-full object-cover" />
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-green-600 font-medium justify-center">
+                                    <Check className="h-4 w-4" /> Identity Secured
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
