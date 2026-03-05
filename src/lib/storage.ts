@@ -44,7 +44,7 @@ export const removeStorageItem = (key: string): void => {
 export const seedStorage = () => {
   if (typeof window === 'undefined') return;
 
-  const SEED_KEY = 'maruthi_clinic_v1.2.0_final_appointments';
+  const SEED_KEY = 'maruthi_clinic_v1.2.1_appointments';
 
   if (!localStorage.getItem(SEED_KEY)) {
     // 1. Core User Collections
