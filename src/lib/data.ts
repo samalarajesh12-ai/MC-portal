@@ -106,6 +106,28 @@ export const initialAppointments = [
     time: '02:30 PM',
     status: 'Confirmed',
   },
+  {
+    id: 'app3',
+    doctor: 'Dr. Kumar',
+    doctorId: 'dr-kumar',
+    patient: 'Esther Howard',
+    patientId: 'p3',
+    department: 'Pediatrics',
+    date: '2024-09-05',
+    time: '11:15 AM',
+    status: 'Confirmed',
+  },
+  {
+    id: 'app4',
+    doctor: 'Dr. Smith',
+    doctorId: 'dr-smith',
+    patient: 'John Doe',
+    patientId: 'p4',
+    department: 'Dermatology',
+    date: '2024-09-10',
+    time: '04:00 PM',
+    status: 'Confirmed',
+  },
 ];
 
 export const initialDoctors = [
