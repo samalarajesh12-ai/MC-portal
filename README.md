@@ -1,4 +1,5 @@
-# MARUTHI CLINIC PORTAL (v1.0.0)
+
+# MARUTHI CLINIC PORTAL (v1.2.0)
 
 A professional, data-driven clinic management system built with the **Next.js + Firebase + ShadCN** preset.
 
@@ -7,23 +8,25 @@ A professional, data-driven clinic management system built with the **Next.js + 
 - **Styling**: Tailwind CSS
 - **UI Components**: ShadCN UI (Radix UI)
 - **Icons**: Lucide React
-- **Database**: Local Storage (Current) / Firebase Firestore (Ready)
-- **Authentication**: Custom Biometric Logic / Firebase Auth (Ready)
+- **Database**: Local Storage (Persistence Guaranteed)
+- **Authentication**: Custom Biometric Logic (FaceID Simulation)
+- **Reporting**: PDF Invoices and Clinical Reports (jsPDF)
 
-## Version 1.0.0 Features
-- **Doctor Portal**: Specialized interface for surgical performance analytics and operation registries.
-- **Patient Portal**: Focused dashboard for chronic disease profiling and chronological visit tracking.
-- **Biometric Identity**: Secure registration with webcam capture or professional portrait upload.
-- **Persistence**: Automatic background synchronization with browser storage.
-- **Currency**: Localized clinical billing in Rupees (Rs).
+## Version 1.2.0 Features
+- **Doctor Portal**: Surgical analytics, Patient Management, Digital Prescriptions, and Attendance logs.
+- **Patient Portal**: Chronic disease profiling, Appointment scheduling, and Medical Records.
+- **Advanced Billing**: Split payments (Cash/UPI), 2.5% Clinical GST, and Surgical item registry.
+- **Biometric Identity**: Identity registration with webcam capture and verified staff authentication.
+- **Reporting**: Downloadable PDF Invoices and Comprehensive Medical Profiles.
+- **Persistence**: Automatic real-time synchronization with browser local storage.
 
 ## Understanding Data Storage
-This application currently uses a **Local Storage Database** (`localStorage`) to store all clinical records, registrations, and updates. 
+This application uses a **Local Storage Database** (`localStorage`) to store all clinical records.
 
 ### Critical Note for Deployment:
-- **Scope**: Local storage is private to your specific browser and domain. 
-- **Firebase Studio vs. Vercel**: Data you enter while testing in Firebase Studio **will not** appear in your Vercel deployment. When you open your live Vercel link, the app will initialize its own fresh database for you on that domain.
-- **Persistence**: Any changes you make (registering a patient, updating a profile) will stay saved in your browser's local storage for that specific site.
+- **Scope**: Local storage is private to your specific browser and domain.
+- **Persistence**: Any changes you make (registering a patient, updating a profile, split billing) will stay saved in your browser's local storage for that specific site on that device.
+- **Synchronization**: All clinical updates are synced "on time" to ensure zero data loss during a session.
 
 ## Deployment to GitHub & Vercel
 
@@ -31,7 +34,7 @@ This application currently uses a **Local Storage Database** (`localStorage`) to
    ```bash
    git init
    git add .
-   git commit -m "Final: Professional Clinic Portal v1.0.0 with AI and Analytics"
+   git commit -m "Final: Professional Clinic Portal v1.2.0 with Advanced Billing and Persistence"
    ```
 
 2. **Publish to GitHub**:
