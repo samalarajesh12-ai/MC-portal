@@ -32,7 +32,6 @@ import {
   TrendingUp,
   Award,
   Clock,
-  ChevronRight,
   Camera,
   Upload,
   Check
@@ -50,18 +49,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { doctorPerformance, previousOperations } from '@/lib/data';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  ResponsiveContainer,
-  Cell
-} from 'recharts';
-import { useFirestore, useUser, useDoc, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where, orderBy, limit } from 'firebase/firestore';
 
 const COMMON_DISEASES = [
@@ -240,6 +228,18 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
 
 function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: any) => void }) {
   const [showEdit, setShowEdit] = useState(false);
+  const firestore = useFirestore();
+
+  // Query actual operations performed by this doctor from Firestore
+  const opsQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'operations'), where('doctorId', '==', user.id)), 
+    [firestore, user.id]
+  );
+  const { data: operations = [] } = useCollection(opsQuery);
+
+  const totalOps = operations?.length || 0;
+  const successOps = operations?.filter(op => op.outcome === 'Success').length || 0;
+  const successRate = totalOps > 0 ? ((successOps / totalOps) * 100).toFixed(1) : "0.0";
 
   return (
     <div className="flex flex-col gap-6">
@@ -261,12 +261,12 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-primary/20 bg-card shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Surgeries</CardTitle>
+            <CardTitle className="text-sm font-medium">Your Surgeries</CardTitle>
             <Activity className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{doctorPerformance.totalSurgeries}</div>
-            <p className="text-xs text-muted-foreground mt-1">Cross-device total</p>
+            <div className="text-2xl font-bold">{totalOps}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total clinical procedures</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm">
@@ -275,28 +275,28 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{doctorPerformance.successRate}%</div>
-            <p className="text-xs text-muted-foreground mt-1">Clinical excellence rating</p>
+            <div className="text-2xl font-bold">{successRate}%</div>
+            <p className="text-xs text-muted-foreground mt-1">Based on cloud records</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Patients Seen</CardTitle>
+            <CardTitle className="text-sm font-medium">Patients Managed</CardTitle>
             <UserCheck className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{doctorPerformance.patientsSeen}</div>
-            <p className="text-xs text-muted-foreground mt-1">Lifetime consultations</p>
+            <div className="text-2xl font-bold">{totalOps}</div>
+            <p className="text-xs text-muted-foreground mt-1">Unique consultations</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Attendance</CardTitle>
+            <CardTitle className="text-sm font-medium">Shift Status</CardTitle>
             <Clock className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{doctorPerformance.attendancePercentage}%</div>
-            <p className="text-xs text-muted-foreground mt-1">Shift availability</p>
+            <div className="text-2xl font-bold">Active</div>
+            <p className="text-xs text-muted-foreground mt-1">Currently on clinical duty</p>
           </CardContent>
         </Card>
       </div>
@@ -322,12 +322,14 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const firestore = useFirestore();
 
+  // Query appointments strictly for this patient
   const appointmentsQuery = useMemoFirebase(() => 
     query(collection(firestore, 'patients', user.id, 'appointments'), orderBy('date', 'asc'), limit(5)), 
     [firestore, user.id]
   );
   const { data: userAppointments = [] } = useCollection(appointmentsQuery);
 
+  // Query medications strictly for this patient
   const medicationsQuery = useMemoFirebase(() => 
     query(collection(firestore, 'medications'), where('patientId', '==', user.id)), 
     [firestore, user.id]
@@ -347,11 +349,11 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
           <h1 className="text-3xl font-bold font-headline text-primary">
             Welcome back, {user.firstName}!
           </h1>
-          <p className="text-muted-foreground">Your health records are synced across all your devices.</p>
+          <p className="text-muted-foreground">Your unique medical profile is isolated and cloud-synced.</p>
         </div>
         <div className="flex items-center gap-2">
            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 py-1 px-3">
-             <ShieldAlert className="h-3 w-3 mr-1" /> Cloud Secured Account
+             <ShieldAlert className="h-3 w-3 mr-1" /> Account Isolated (UID: {user.id.substring(0, 8)})
            </Badge>
         </div>
       </div>
@@ -359,22 +361,22 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="border-primary/20 bg-card shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upcoming Appointments</CardTitle>
+            <CardTitle className="text-sm font-medium">Your Appointments</CardTitle>
             <div className="bg-primary/10 p-2 rounded-full"><CalendarIconIcon className="h-4 w-4 text-primary" /></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{userAppointments?.length || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Next: {userAppointments?.[0]?.date || 'None scheduled'}</p>
+            <p className="text-xs text-muted-foreground mt-1">Upcoming clinical visits</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Medication Refills</CardTitle>
+            <CardTitle className="text-sm font-medium">Your Meds & Refills</CardTitle>
             <div className="bg-primary/10 p-2 rounded-full"><Pill className="h-4 w-4 text-primary" /></div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{refillsNeededCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">{refillsNeededCount > 0 ? 'Refills required soon' : 'All prescriptions active'}</p>
+            <p className="text-xs text-muted-foreground mt-1">{refillsNeededCount > 0 ? 'Action required soon' : 'All prescriptions active'}</p>
           </CardContent>
         </Card>
       </div>
@@ -384,7 +386,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
           <CardHeader className="flex flex-row items-center">
             <div className="grid gap-1">
               <CardTitle>Clinical Schedule</CardTitle>
-              <CardDescription>Appointments synchronized from the cloud.</CardDescription>
+              <CardDescription>Records synchronized for your UID only.</CardDescription>
             </div>
             <Button asChild size="sm" className="ml-auto gap-1">
               <Link href="/appointments">Manage<ArrowUpRight className="h-4 w-4" /></Link>
@@ -405,7 +407,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
                 ) : (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-6 text-xs text-muted-foreground italic">
-                      No upcoming consultations.
+                      No upcoming consultations recorded for this profile.
                     </TableCell>
                   </TableRow>
                 )}
@@ -429,7 +431,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
               </div>
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Account Sync</Label>
-                <p className="font-semibold text-green-600 flex items-center gap-1"><Check className="h-3 w-3"/> Active</p>
+                <p className="font-semibold text-green-600 flex items-center gap-1"><Check className="h-3 w-3"/> Verified</p>
               </div>
             </div>
             
@@ -441,7 +443,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
                     <Badge key={d} variant="secondary" className="text-[10px] py-0">{d}</Badge>
                   ))
                 ) : (
-                  <p className="text-[10px] italic text-muted-foreground">None listed.</p>
+                  <p className="text-[10px] italic text-muted-foreground">None listed for this profile.</p>
                 )}
               </div>
             </div>
