@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -14,7 +15,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Stethoscope, ClipboardCheck, Camera, ShieldAlert, Check, Upload } from 'lucide-react';
+import { Stethoscope, ClipboardCheck, Camera, ShieldAlert, Check, Upload, BookOpen, Banknote } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -23,33 +24,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useAuth } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const SPECIALTIES = [
-  "Cardiology",
-  "Dermatology",
-  "Pediatrics",
-  "Neurology",
-  "Orthopedics",
-  "Oncology",
-  "Psychiatry",
-  "Endocrinology",
-  "Gastroenterology",
-  "Nephrology",
-  "Pulmonology",
-  "Ophthalmology",
-  "ENT (Otolaryngology)",
-  "General Surgery",
-  "Gynecology",
-  "Radiology",
-  "Anesthesiology",
-  "Emergency Medicine",
-  "Internal Medicine",
-  "Urology",
-  "Pathology"
+  "Cardiology", "Dermatology", "Pediatrics", "Neurology", "Orthopedics", 
+  "Oncology", "Psychiatry", "Endocrinology", "Gastroenterology", "Nephrology", 
+  "Pulmonology", "Ophthalmology", "ENT", "General Surgery", "Gynecology", 
+  "Radiology", "Anesthesiology", "Emergency Medicine", "Internal Medicine", "Urology"
+];
+
+const DEPARTMENTS = [
+  "Inpatient Care", "Outpatient Clinic", "Surgical Ward", "Diagnostics", "Critical Care", "Pediatrics Division"
 ];
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -71,18 +60,12 @@ export default function DoctorRegisterPage() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         setHasCameraPermission(true);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (error) {
-        console.error('Error accessing camera:', error);
         setHasCameraPermission(false);
       }
     };
-
     getCameraPermission();
-
     return () => {
         if (videoRef.current && videoRef.current.srcObject) {
             const stream = videoRef.current.srcObject as MediaStream;
@@ -94,11 +77,7 @@ export default function DoctorRegisterPage() {
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!faceImage) {
-        toast({
-            variant: 'destructive',
-            title: 'Face Image Required',
-            description: 'Please capture or upload a face image to complete registration.',
-        });
+        toast({ variant: 'destructive', title: 'Face Image Required', description: 'Please capture a biometric profile.' });
         return;
     }
 
@@ -119,7 +98,10 @@ export default function DoctorRegisterPage() {
         bloodGroup: formData.get('blood-group'),
         qualification: formData.get('qualification'),
         specialty: formData.get('specialty'),
+        department: formData.get('department'),
         experience: formData.get('experience'),
+        consultationFee: formData.get('consultation-fee'),
+        bio: formData.get('bio'),
         faceImage: faceImage,
         role: 'doctor',
         createdAt: new Date().toISOString()
@@ -128,23 +110,10 @@ export default function DoctorRegisterPage() {
       const docRef = doc(firestore, 'doctors', user.uid);
       setDocumentNonBlocking(docRef, doctorData, { merge: true });
 
-      toast({
-        title: 'Registration Successful',
-        description: "Your staff account has been created. You can now log in.",
-        action: (
-          <div className="flex items-center">
-            <ClipboardCheck className="mr-2 h-5 w-5 text-green-500" />
-            <span>Success</span>
-          </div>
-        ),
-      });
+      toast({ title: 'Registration Successful', description: "Your staff account has been created." });
       router.push('/doctor/login');
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Registration Error',
-        description: error.message || 'Could not register staff account.',
-      });
+      toast({ variant: 'destructive', title: 'Registration Error', description: error.message });
     }
   };
 
@@ -154,191 +123,80 @@ export default function DoctorRegisterPage() {
         if (context) {
             canvasRef.current.width = videoRef.current.videoWidth;
             canvasRef.current.height = videoRef.current.videoHeight;
-            context.drawImage(videoRef.current, 0, 0, videoRef.current.videoWidth, videoRef.current.videoHeight);
-            const dataUrl = canvasRef.current.toDataURL('image/png');
-            setFaceImage(dataUrl);
-            toast({ title: 'Face image captured!'});
+            context.drawImage(videoRef.current, 0, 0);
+            setFaceImage(canvasRef.current.toDataURL('image/png'));
+            toast({ title: 'Biometric profile captured.'});
         }
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFaceImage(reader.result as string);
-        toast({ title: 'Image uploaded successfully!' });
-      };
-      reader.readAsDataURL(file);
     }
   };
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/40 p-4">
       <Link href="/" className="mb-8 flex items-center gap-2">
-      <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="h-8 w-8 text-primary"
-          >
-            <path
-              fillRule="evenodd"
-              d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z"
-              clipRule="evenodd"
-            />
-          </svg>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline text-primary">
-          MARUTHI CLINIC
-        </h1>
+        <Stethoscope className="h-8 w-8 text-primary" />
+        <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline text-primary">MARUTHI CLINIC</h1>
       </Link>
       <Card className="w-full max-w-2xl shadow-xl border-primary/20">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 bg-primary/10 p-3 rounded-full w-fit">
-            <Stethoscope className="h-10 w-10 text-primary" />
+            <ClipboardCheck className="h-10 w-10 text-primary" />
           </div>
           <CardTitle className="text-2xl font-headline">Doctor Registration</CardTitle>
-          <CardDescription>
-            Join our medical staff to provide excellence in patient care.
-          </CardDescription>
+          <CardDescription>Join our staff to provide excellence in clinical care.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2"><Label>First Name</Label><Input name="first-name" required /></div>
+              <div className="space-y-2"><Label>Last Name</Label><Input name="last-name" required /></div>
+              <div className="space-y-2"><Label>Work Email</Label><Input name="email" type="email" required /></div>
+              <div className="space-y-2"><Label>Mobile Number</Label><Input name="mobile" type="tel" required /></div>
+              
               <div className="space-y-2">
-                <Label htmlFor="first-name">First Name</Label>
-                <Input name="first-name" id="first-name" placeholder="John" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="last-name">Last Name</Label>
-                <Input name="last-name" id="last-name" placeholder="Smith" required />
-              </div>
-               <div className="space-y-2">
-                <Label htmlFor="mobile">Mobile Number</Label>
-                <Input name="mobile" id="mobile" type="tel" placeholder="+91..." required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Work Email</Label>
-                <Input
-                  name="email"
-                  id="email"
-                  type="email"
-                  placeholder="dr.smith@maruthi.clinic"
-                  required
-                />
-              </div>
-               <div className="space-y-2">
-                    <Label htmlFor="blood-group">Blood Group</Label>
-                    <Select name="blood-group">
-                        <SelectTrigger id="blood-group">
-                            <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {BLOOD_GROUPS.map((group) => (
-                              <SelectItem key={group} value={group}>{group}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="joining-date">Date of Joining</Label>
-                  <Input id="joining-date" type="date" required />
-                </div>
-              <div className="space-y-2">
-                <Label htmlFor="qualification">Qualification</Label>
-                <Input name="qualification" id="qualification" placeholder="e.g., MBBS, MD" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="specialty">Specialty</Label>
+                <Label>Medical Specialty</Label>
                 <Select name="specialty">
-                  <SelectTrigger id="specialty">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SPECIALTIES.map((spec) => (
-                      <SelectItem key={spec} value={spec}>{spec}</SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{SPECIALTIES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="license">License Number</Label>
-                <Input id="license" placeholder="GMC-1234567" required />
+                <Label>Clinic Department</Label>
+                <Select name="department">
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>{DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="experience">Experience (Years)</Label>
-                <Input name="experience" id="experience" type="number" placeholder="5" required />
-              </div>
-            </div>
-            
-            <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
-                <Label className="flex items-center gap-2 font-semibold">
-                    <Camera className="h-5 w-5 text-primary"/>
-                    Biometric Identity Registration
-                </Label>
-                <div className="flex flex-col gap-6 lg:flex-row items-start">
-                    <div className="relative flex flex-col items-center justify-center flex-1 w-full lg:w-auto">
-                        <div className="relative w-full aspect-video rounded-md border-2 border-primary/20 bg-black/5 overflow-hidden">
-                            <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                            <canvas ref={canvasRef} className="hidden"></canvas>
-                        </div>
-                        <Button type="button" onClick={captureFaceImage} disabled={hasCameraPermission !== true} variant="outline" className="mt-4 w-full">Capture from Webcam</Button>
-                    </div>
-                    
-                    <div className="flex flex-col items-center justify-center flex-1 w-full lg:w-auto self-stretch gap-4 border-l pl-6 border-dashed border-primary/20">
-                        <div className="text-center space-y-2 w-full">
-                            <p className="text-sm font-medium text-muted-foreground">Or Upload Portrait</p>
-                            <input 
-                                type="file" 
-                                accept="image/*" 
-                                className="hidden" 
-                                ref={fileInputRef} 
-                                onChange={handleFileUpload}
-                            />
-                            <Button 
-                                type="button" 
-                                variant="secondary" 
-                                className="w-full gap-2"
-                                onClick={() => fileInputRef.current?.click()}
-                            >
-                                <Upload className="h-4 w-4" /> Upload File
-                            </Button>
-                        </div>
-                        {faceImage && (
-                            <div className="mt-2 text-center">
-                                <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-primary mx-auto mb-2">
-                                    <img src={faceImage} alt="Identity Preview" className="h-full w-full object-cover" />
-                                </div>
-                                <div className="flex items-center gap-2 text-sm text-green-600 font-medium justify-center">
-                                    <Check className="h-4 w-4" /> Identity Secured
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
+
+              <div className="space-y-2"><Label>Consultation Fee (Rs)</Label><div className="relative"><Banknote className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"/><Input name="consultation-fee" type="number" className="pl-8" placeholder="e.g. 500" required /></div></div>
+              <div className="space-y-2"><Label>Experience (Years)</Label><Input name="experience" type="number" required /></div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Security Password</Label>
-              <Input name="password" id="password" type="password" required />
+              <Label className="flex items-center gap-2"><BookOpen className="h-4 w-4"/> Professional Bio</Label>
+              <Textarea name="bio" placeholder="Describe your medical background and expertise..." className="min-h-[100px]" required />
             </div>
 
-            <Button type="submit" className="w-full h-11">
-              Complete Application
-            </Button>
+            <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+                <Label className="flex items-center gap-2 font-semibold"><Camera className="h-5 w-5 text-primary"/>Biometric Identity Registration</Label>
+                <div className="flex flex-col gap-6 lg:flex-row items-center">
+                    <div className="relative w-full aspect-video rounded-md border-2 border-primary/20 bg-black overflow-hidden">
+                        <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                        <canvas ref={canvasRef} className="hidden"></canvas>
+                    </div>
+                    <div className="flex flex-col gap-4 w-full">
+                        <Button type="button" onClick={captureFaceImage} disabled={hasCameraPermission !== true} className="w-full">Capture from Webcam</Button>
+                        {faceImage && <div className="flex items-center gap-2 text-sm text-green-600 font-medium justify-center"><Check className="h-4 w-4" /> Identity Secured</div>}
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-2"><Label>Security Password</Label><Input name="password" type="password" required /></div>
+            <Button type="submit" className="w-full h-11">Register Account</Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center border-t py-4">
-          <div className="text-sm text-muted-foreground">
-            Already have an account?{' '}
-            <Link
-              href="/doctor/login"
-              className="font-medium text-primary hover:underline"
-            >
-              Login
-            </Link>
-          </div>
+          <div className="text-sm text-muted-foreground">Already have an account? <Link href="/doctor/login" className="font-bold text-primary hover:underline">Login</Link></div>
         </CardFooter>
       </Card>
     </div>

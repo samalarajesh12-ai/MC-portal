@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -25,7 +26,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { UserPlus, Copy, Check, Camera, ShieldAlert, Stethoscope, Upload, Info } from 'lucide-react';
+import { UserPlus, Copy, Check, Camera, ShieldAlert, Stethoscope, Upload, Info, MapPin, HeartHandshake } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -45,7 +46,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useAuth } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -57,12 +58,13 @@ const formSchema = z.object({
   dob: z.string().min(1, 'Date of birth is required'),
   bloodGroup: z.string().min(1, 'Blood group is required'),
   location: z.string().min(1, 'Location is required'),
+  address: z.string().min(5, 'Full address is required'),
   emergencyContactName: z.string().min(1, 'Emergency contact name is required'),
   emergencyContactPhone: z.string().min(1, 'Emergency contact phone is required'),
   emergencyContactRelation: z.string().min(1, 'Relation is required'),
+  nomineeName: z.string().min(1, 'Nominee name is required'),
+  nomineeRelation: z.string().min(1, 'Nominee relationship is required'),
   preExistingConditions: z.string().optional(),
-  nomineeName: z.string().optional(),
-  nomineeRelation: z.string().optional(),
   digitalSignature: z.string().optional(),
 });
 
@@ -92,12 +94,13 @@ export default function PatientRegisterPage() {
       dob: '',
       bloodGroup: '',
       location: '',
+      address: '',
       emergencyContactName: '',
       emergencyContactPhone: '',
       emergencyContactRelation: '',
-      preExistingConditions: '',
       nomineeName: '',
       nomineeRelation: '',
+      preExistingConditions: '',
       digitalSignature: '',
     },
   });
@@ -204,7 +207,7 @@ export default function PatientRegisterPage() {
           <Stethoscope className="h-7 w-7 text-primary" />
           <h1 className="text-xl font-bold tracking-tight text-foreground font-headline">MARUTHI CLINIC</h1>
         </Link>
-        <Card className="w-full max-w-2xl border-primary/20 shadow-lg">
+        <Card className="w-full max-w-3xl border-primary/20 shadow-lg">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 bg-primary/10 p-3 rounded-full w-fit">
               <UserPlus className="h-8 w-8 text-primary" />
@@ -216,6 +219,7 @@ export default function PatientRegisterPage() {
             <FormProvider {...methods}>
               <Form {...methods}>
                 <form onSubmit={methods.handleSubmit(handleRegister)} className="space-y-8">
+                  {/* Personal Section */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold border-b pb-2 flex items-center gap-2">
                       <Info className="h-5 w-5 text-primary" /> Personal Information
@@ -234,13 +238,7 @@ export default function PatientRegisterPage() {
                         <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input type="tel" placeholder="+91..." {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={methods.control} name="dob" render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Date of Birth</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                        <FormItem><FormLabel>Date of Birth</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={methods.control} name="bloodGroup" render={({ field }) => (
                         <FormItem><FormLabel>Blood Group</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -248,19 +246,32 @@ export default function PatientRegisterPage() {
                           <SelectContent><SelectItem value="A+">A+</SelectItem><SelectItem value="A-">A-</SelectItem><SelectItem value="B+">B+</SelectItem><SelectItem value="B-">B-</SelectItem><SelectItem value="AB+">AB+</SelectItem><SelectItem value="AB-">AB-</SelectItem><SelectItem value="O+">O+</SelectItem><SelectItem value="O-">O-</SelectItem></SelectContent>
                         </Select><FormMessage /></FormItem>
                       )} />
+                    </div>
+                  </div>
+
+                  {/* Address Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold border-b pb-2 flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-primary" /> Residential Details
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <FormField control={methods.control} name="location" render={({ field }) => (
                         <FormItem><FormLabel>City / Town</FormLabel><FormControl><Input placeholder="e.g., Bengaluru" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={methods.control} name="address" render={({ field }) => (
+                        <FormItem className="md:col-span-2"><FormLabel>Full Residential Address</FormLabel><FormControl><Textarea placeholder="Building, Street, Area, Pincode..." {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold border-b pb-2 flex items-center gap-2">
-                      <ShieldAlert className="h-5 w-5 text-primary" /> Emergency Contact
-                    </h3>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {/* Emergency & Nominee */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold border-b pb-2 flex items-center gap-2">
+                        <ShieldAlert className="h-5 w-5 text-primary" /> Emergency Contact
+                      </h3>
                       <FormField control={methods.control} name="emergencyContactName" render={({ field }) => (
-                        <FormItem><FormLabel>Contact Name</FormLabel><FormControl><Input placeholder="Emergency Name" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Contact Name</FormLabel><FormControl><Input placeholder="Name" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={methods.control} name="emergencyContactPhone" render={({ field }) => (
                         <FormItem><FormLabel>Contact Phone</FormLabel><FormControl><Input type="tel" placeholder="+91..." {...field} /></FormControl><FormMessage /></FormItem>
@@ -269,8 +280,21 @@ export default function PatientRegisterPage() {
                         <FormItem><FormLabel>Relation</FormLabel><FormControl><Input placeholder="e.g. Spouse" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold border-b pb-2 flex items-center gap-2">
+                        <HeartHandshake className="h-5 w-5 text-primary" /> Nominee Information
+                      </h3>
+                      <FormField control={methods.control} name="nomineeName" render={({ field }) => (
+                        <FormItem><FormLabel>Nominee Name</FormLabel><FormControl><Input placeholder="Nominee Full Name" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={methods.control} name="nomineeRelation" render={({ field }) => (
+                        <FormItem><FormLabel>Nominee Relationship</FormLabel><FormControl><Input placeholder="e.g. Child, Parent" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
                   </div>
 
+                  {/* Biometrics */}
                   <div className="space-y-4 rounded-lg border p-6 bg-muted/20">
                     <Label className="flex items-center gap-2 font-semibold text-lg">
                       <Camera className="h-5 w-5 text-primary" /> Biometric Identity Registration
@@ -289,19 +313,8 @@ export default function PatientRegisterPage() {
                       <div className="flex flex-col items-center justify-center flex-1 w-full lg:w-auto self-stretch gap-4 border-l pl-6 border-dashed border-primary/20">
                         <div className="text-center space-y-2">
                           <p className="text-sm font-medium text-muted-foreground">Or Upload Portrait</p>
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            className="hidden" 
-                            ref={fileInputRef} 
-                            onChange={handleFileUpload}
-                          />
-                          <Button 
-                            type="button" 
-                            variant="secondary" 
-                            className="w-full gap-2"
-                            onClick={() => fileInputRef.current?.click()}
-                          >
+                          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
+                          <Button type="button" variant="secondary" className="w-full gap-2" onClick={() => fileInputRef.current?.click()}>
                             <Upload className="h-4 w-4" /> Upload File
                           </Button>
                         </div>
@@ -319,14 +332,12 @@ export default function PatientRegisterPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                     <FormField control={methods.control} name="preExistingConditions" render={({ field }) => (
-                      <FormItem><FormLabel>Initial Health History (Optional)</FormLabel><FormControl><Textarea placeholder="Any major medical conditions, allergies, or surgeries you wish to share now..." {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                  </div>
+                  <FormField control={methods.control} name="preExistingConditions" render={({ field }) => (
+                    <FormItem><FormLabel>Initial Health History (Optional)</FormLabel><FormControl><Textarea placeholder="Any major medical conditions, allergies, or surgeries..." {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
 
                   <Button type="submit" className="w-full h-12 text-lg shadow-md shadow-primary/20">
-                    Submit Registration
+                    Complete Registration
                   </Button>
                 </form>
               </Form>
