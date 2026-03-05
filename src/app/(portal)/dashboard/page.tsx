@@ -88,7 +88,6 @@ function DoctorDashboard({ user }: { user: any }) {
         </div>
       </div>
 
-      {/* Performance Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-primary/20 bg-card shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -133,7 +132,6 @@ function DoctorDashboard({ user }: { user: any }) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        {/* Success Rate Chart */}
         <Card className="lg:col-span-4 border-primary/10">
           <CardHeader>
             <CardTitle>Surgical Success Metrics</CardTitle>
@@ -159,7 +157,6 @@ function DoctorDashboard({ user }: { user: any }) {
           </CardContent>
         </Card>
 
-        {/* Recent Operations */}
         <Card className="lg:col-span-3 border-primary/10">
           <CardHeader>
             <CardTitle>Previous Operations</CardTitle>
@@ -180,89 +177,10 @@ function DoctorDashboard({ user }: { user: any }) {
                 </div>
               ))}
             </div>
-            <Button variant="outline" size="sm" className="w-full mt-6 gap-1">
-              View All Records <ChevronRight className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="w-full mt-6 gap-1" asChild>
+              <Link href="/doctor/operations">View All Records <ChevronRight className="h-4 w-4" /></Link>
             </Button>
           </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-        {/* Attendance Log */}
-        <Card className="lg:col-span-2 border-primary/10">
-          <CardHeader>
-            <CardTitle>Work Attendance Log</CardTitle>
-            <CardDescription>Daily clock-in and clinical shifts.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Shift</TableHead>
-                  <TableHead>Hours</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dailyAttendance.map((log) => (
-                  <TableRow key={log.date}>
-                    <TableCell className="font-medium">{log.date}</TableCell>
-                    <TableCell>{log.shift}</TableCell>
-                    <TableCell>{log.hours > 0 ? `${log.hours}h` : '-'}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant={log.status === 'Present' ? 'default' : 'outline'}>
-                        {log.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {/* Doctor Identity */}
-        <Card className="border-primary/10 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="text-lg">Staff Credentials</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4 border-b pb-4">
-               <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-primary shadow-sm bg-background">
-                  {user.faceImage ? (
-                    <img src={user.faceImage} alt="Dr." className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-primary font-bold text-xl">
-                      {user.firstName?.charAt(0)}
-                    </div>
-                  )}
-               </div>
-               <div>
-                  <h4 className="font-bold text-lg">Dr. {user.firstName} {user.lastName}</h4>
-                  <p className="text-xs text-muted-foreground">{user.specialty}</p>
-               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-               <div>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Experience</p>
-                  <p className="font-semibold">{user.experience || '12'} Years</p>
-               </div>
-               <div>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">License</p>
-                  <p className="font-semibold">{user.license || 'MC-882910'}</p>
-               </div>
-               <div className="col-span-2">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Clinical Bio</p>
-                  <p className="text-xs italic text-muted-foreground leading-relaxed">
-                    Dedicated cardiologist specializing in non-invasive clinical procedures and advanced heart failure management since 2012.
-                  </p>
-               </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="link" className="text-xs p-0 h-auto">Update Professional Profile →</Button>
-          </CardFooter>
         </Card>
       </div>
     </div>
@@ -294,7 +212,7 @@ function PatientDashboard({ user }: { user: any }) {
       setEditContact(user.contactNumber || '');
       setEditDob(user.dob || user.dateOfBirth || undefined);
 
-      if (!user.selectedDiseases && !user.preExistingConditions) {
+      if (!user.selectedDiseases && !user.preExistingConditions && !user.isProfileCompleted) {
         setShowProfileDialog(true);
       }
     }
@@ -306,11 +224,14 @@ function PatientDashboard({ user }: { user: any }) {
       selectedDiseases, 
       preExistingConditions: manualConditions,
       contactNumber: editContact,
-      dob: editDob
+      dob: editDob,
+      isProfileCompleted: true
     };
     
+    // Update active session
     setStorageItem('currentUser', updatedUser);
     
+    // Update main collection in LocalStorage
     const patients = getStorageItem<any[]>('patients', []);
     const patientIndex = patients.findIndex(p => p.id === user.id);
     if (patientIndex > -1) {
@@ -318,11 +239,12 @@ function PatientDashboard({ user }: { user: any }) {
       setStorageItem('patients', patients);
     }
 
+    // Trigger Notification
     const notifications = getStorageItem<any[]>('notifications', []);
     const newNotif = {
       id: crypto.randomUUID(),
       title: 'Medical Profile Updated',
-      description: 'Your health records and contact information have been synchronized.',
+      description: 'Your clinical identity and health records have been securely synchronized.',
       time: format(new Date(), 'h:mm a'),
       type: 'profile',
       read: false
@@ -331,8 +253,8 @@ function PatientDashboard({ user }: { user: any }) {
     
     setShowProfileDialog(false);
     toast({
-      title: "Medical Profile Updated",
-      description: "Your health history and contact details have been securely saved.",
+      title: "Health Record Synchronized",
+      description: "Your updates are now stored in the clinical database.",
     });
   };
 
@@ -345,11 +267,11 @@ function PatientDashboard({ user }: { user: any }) {
           <h1 className="text-3xl font-bold font-headline text-primary">
             Welcome back, {user.firstName}!
           </h1>
-          <p className="text-muted-foreground">Manage your health and appointments at Maruthi Clinic.</p>
+          <p className="text-muted-foreground">Clinical overview for Maruthi Clinic.</p>
         </div>
         <div className="flex items-center gap-2">
            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 py-1 px-3">
-             <ShieldAlert className="h-3 w-3 mr-1" /> Emergency Contact Active
+             <ShieldAlert className="h-3 w-3 mr-1" /> Active Medical Profile
            </Badge>
         </div>
       </div>
@@ -362,7 +284,7 @@ function PatientDashboard({ user }: { user: any }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{userAppointments.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">You have {userAppointments.length} sessions scheduled.</p>
+            <p className="text-xs text-muted-foreground mt-1">Confirmed clinical visits.</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm hover:shadow-md transition-shadow">
@@ -372,7 +294,7 @@ function PatientDashboard({ user }: { user: any }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{refillsNeededCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">{refillsNeededCount} medications require attention.</p>
+            <p className="text-xs text-muted-foreground mt-1">Medications requiring attention.</p>
           </CardContent>
         </Card>
       </div>
@@ -390,20 +312,15 @@ function PatientDashboard({ user }: { user: any }) {
           </CardHeader>
           <CardContent>
             <Table>
-              <TableHeader><TableRow><TableHead>Healthcare Provider</TableHead><TableHead>Specialty</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Provider</TableHead><TableHead>Department</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
               <TableBody>
                 {userAppointments.slice(0, 3).map((appointment) => (
-                  <TableRow key={appointment.id} className="hover:bg-muted/30">
+                  <TableRow key={appointment.id}>
                     <TableCell><div className="font-semibold text-primary">{appointment.doctor}</div></TableCell>
                     <TableCell><Badge variant="outline">{appointment.department}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground font-medium">{appointment.date} @ {appointment.time}</TableCell>
+                    <TableCell className="text-muted-foreground">{appointment.date} @ {appointment.time}</TableCell>
                   </TableRow>
                 ))}
-                {userAppointments.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground italic">No upcoming clinical appointments.</TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -413,85 +330,73 @@ function PatientDashboard({ user }: { user: any }) {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" /> 
-              My Medical Profile
+              Clinical Summary
             </CardTitle>
-            <CardDescription>Key records for your clinical safety.</CardDescription>
           </CardHeader>
-          <CardContent className="flex-1 space-y-4">
+          <CardContent className="flex-1 space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Blood Group</Label>
-                <p className="text-lg font-bold text-primary">{user.bloodGroup || 'Not set'}</p>
+                <p className="font-bold">{user.bloodGroup || 'A+'}</p>
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Contact Number</Label>
-                <p className="text-sm font-semibold truncate">{user.contactNumber || 'Not provided'}</p>
-              </div>
-              <div className="space-y-1 col-span-2">
-                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Emergency Contact</Label>
-                <p className="text-sm font-semibold">{user.emergencyContactName || 'None listed'}</p>
-                <p className="text-[10px] text-muted-foreground">{user.emergencyContactPhone} ({user.emergencyContactRelation})</p>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Contact</Label>
+                <p className="font-semibold">{user.contactNumber || '+91-XXXXX'}</p>
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Current Conditions</Label>
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Medical History</Label>
               <div className="flex flex-wrap gap-1.5">
                 {user.selectedDiseases?.map((d: string) => (
                   <Badge key={d} variant="secondary" className="text-[10px] py-0">{d}</Badge>
                 ))}
-                {(!user.selectedDiseases || user.selectedDiseases.length === 0) && (
-                  <p className="text-xs text-muted-foreground italic">No chronic conditions listed.</p>
-                )}
               </div>
             </div>
           </CardContent>
-          <CardFooter className="pt-0">
-             <Button variant="outline" size="sm" className="w-full text-xs h-8" onClick={() => setShowProfileDialog(true)}>
-               Update Medical Profile
+          <CardFooter>
+             <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setShowProfileDialog(true)}>
+               Update Records
              </Button>
           </CardFooter>
         </Card>
       </div>
 
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
-        <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-headline text-primary">Manage Your Medical Identity</DialogTitle>
+            <DialogTitle className="text-2xl font-headline text-primary">Manage Medical Identity</DialogTitle>
             <DialogDescription>
-              Keep your health history and clinical contact information up to date.
+              Keep your health history and contact information current.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-contact" className="font-semibold">Current Contact Number</Label>
+                <Label>Contact Number</Label>
                 <input 
-                  id="edit-contact" 
                   type="tel" 
                   value={editContact} 
                   onChange={(e) => setEditContact(e.target.value)}
-                  placeholder="+91..."
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
-              <div className="space-y-2 flex flex-col">
-                <Label htmlFor="edit-dob" className="font-semibold mb-1">Date of Birth</Label>
+              <div className="space-y-2">
+                <Label>Date of Birth</Label>
                 <input 
-                  id="edit-dob"
                   type="date"
                   value={editDob ? editDob.split('T')[0] : ''} 
                   onChange={(e) => setEditDob(e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
             </div>
 
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Common Conditions</Label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Label className="text-base font-semibold">Chronic Conditions</Label>
+              <div className="grid grid-cols-2 gap-3">
                 {COMMON_DISEASES.map((disease) => (
-                  <div key={disease} className="flex items-center space-x-2 p-2 rounded-md border hover:bg-muted/50 transition-colors">
+                  <div key={disease} className="flex items-center space-x-2">
                     <Checkbox 
                       id={disease} 
                       checked={selectedDiseases.includes(disease)}
@@ -500,31 +405,23 @@ function PatientDashboard({ user }: { user: any }) {
                         else setSelectedDiseases(selectedDiseases.filter(d => d !== disease));
                       }}
                     />
-                    <label 
-                      htmlFor={disease}
-                      className="text-xs font-medium leading-none cursor-pointer flex-1"
-                    >
-                      {disease}
-                    </label>
+                    <label htmlFor={disease} className="text-xs">{disease}</label>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-base font-semibold flex items-center gap-2">
-                <Plus className="h-4 w-4 text-primary" /> Other / Manual Entry
-              </Label>
+              <Label className="text-base font-semibold">Other History</Label>
               <Textarea 
-                placeholder="List any other diseases, chronic conditions, or allergies not listed above..."
-                className="min-h-[100px]"
+                placeholder="List any major allergies or surgeries..."
                 value={manualConditions}
                 onChange={(e) => setManualConditions(e.target.value)}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button className="w-full" onClick={handleSaveProfile}>Save Comprehensive Profile</Button>
+            <Button className="w-full" onClick={handleSaveProfile}>Update Local Database</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

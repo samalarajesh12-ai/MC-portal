@@ -1,5 +1,6 @@
 /**
  * Utility functions for interacting with localStorage safely in a Next.js environment.
+ * This acts as our "Client-Side Database" for Maruthi Clinic.
  */
 import { 
   initialAppointments, 
@@ -36,31 +37,33 @@ export const removeStorageItem = (key: string): void => {
 };
 
 /**
- * Seeds localStorage with initial data if it doesn't already exist.
- * This ensures that even on first load (especially on Vercel), there's data to display.
+ * Seeds localStorage with initial professional clinical data.
+ * This runs once per browser to ensure the app is never "empty".
  */
 export const seedStorage = () => {
   if (typeof window === 'undefined') return;
 
-  const SEED_KEY = 'maruthi_seed_v3';
+  const SEED_KEY = 'maruthi_clinic_v4_stable';
 
   if (!localStorage.getItem(SEED_KEY)) {
-    // Patients starts empty until someone registers
+    // 1. Core User Collections
     if (!localStorage.getItem('patients')) setStorageItem('patients', []);
-    
-    // Initial doctors for testing
     if (!localStorage.getItem('doctors')) setStorageItem('doctors', initialDoctors);
     
-    // Clinical data
+    // 2. Clinical Activity Data
     if (!localStorage.getItem('appointments')) setStorageItem('appointments', initialAppointments);
     if (!localStorage.getItem('medications')) setStorageItem('medications', initialMedications);
     if (!localStorage.getItem('bills')) setStorageItem('bills', initialBills);
+    
+    // 3. Health Record System
     if (!localStorage.getItem('labResults')) setStorageItem('labResults', initialLabResults);
     if (!localStorage.getItem('medicalHistory')) setStorageItem('medicalHistory', initialMedicalHistory);
     
-    // Notifications start empty
+    // 4. System Notifications
     if (!localStorage.getItem('notifications')) setStorageItem('notifications', []);
     
+    // Mark as seeded to prevent overwriting user data on next reload
     localStorage.setItem(SEED_KEY, 'true');
+    console.log("Maruthi Clinic: Professional storage seeded successfully.");
   }
 };
