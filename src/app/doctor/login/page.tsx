@@ -14,22 +14,35 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Stethoscope, Camera, ShieldAlert, KeyRound } from 'lucide-react';
+import { Stethoscope, Camera, ShieldAlert, KeyRound, Search, CheckCircle2, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function DoctorLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
+  
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | undefined>(undefined);
   const [isVerifying, setIsVerifying] = useState(false);
   const [loginMethod, setLoginMethod] = useState('password');
+  
+  // Doctor Selection State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
 
   useEffect(() => {
     seedStorage();
-    if (loginMethod === 'faceid') {
+    const storedDoctors = getStorageItem<any[]>('doctors', []);
+    setDoctors(storedDoctors);
+  }, []);
+
+  useEffect(() => {
+    if (loginMethod === 'faceid' && selectedDoctor) {
       const getCameraPermission = async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -50,7 +63,7 @@ export default function DoctorLoginPage() {
         }
       };
     }
-  }, [loginMethod]);
+  }, [loginMethod, selectedDoctor]);
 
   const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,52 +71,63 @@ export default function DoctorLoginPage() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const doctors = getStorageItem<any[]>('doctors', []);
-    const doctor = doctors.find(d => d.email === email && d.password === password);
+    const doctorsList = getStorageItem<any[]>('doctors', []);
+    const doctor = doctorsList.find(d => d.email === email && d.password === password);
 
     if (doctor) {
       setStorageItem('currentUser', { ...doctor, role: 'doctor' });
-      toast({ title: 'Login Successful', description: `Welcome back, Dr. ${doctor.firstName || doctor.name}!` });
+      toast({ title: 'Login Successful', description: `Welcome back, Dr. ${doctor.lastName || doctor.firstName}!` });
       router.push('/dashboard');
     } else {
-      toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid work email or password.' });
+      toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid work credentials.' });
     }
   };
 
   const handleFaceIdVerification = () => {
+    if (!selectedDoctor) {
+      toast({ variant: 'destructive', title: 'Identity Required', description: 'Please select a medical staff record first.' });
+      return;
+    }
+
     setIsVerifying(true);
     setTimeout(() => {
       setIsVerifying(false);
-      const doctors = getStorageItem<any[]>('doctors', []);
-      if (doctors.length > 0) {
-        setStorageItem('currentUser', { ...doctors[0], role: 'doctor' });
-        toast({ title: 'Face ID Verified!', description: 'Welcome back, Doctor!' });
+      
+      if (selectedDoctor && hasCameraPermission) {
+        setStorageItem('currentUser', { ...selectedDoctor, role: 'doctor' });
+        toast({ 
+          title: 'Biometric Access Granted', 
+          description: `Identity verified for Dr. ${selectedDoctor.lastName || selectedDoctor.firstName}.`,
+        });
         router.push('/dashboard');
       } else {
-        toast({ variant: 'destructive', title: 'Face ID Failed', description: 'No registered medical staff found with this biometric data.' });
+        toast({ variant: 'destructive', title: 'Verification Failed', description: 'Face mismatch or camera error. Please try manual sign-in.' });
       }
-    }, 2000);
+    }, 2500);
   };
+
+  const filteredDoctors = doctors.filter(d => 
+    `${d.firstName} ${d.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    d.email.toLowerCase().includes(searchTerm.toLowerCase())
+  ).slice(0, 5);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-4">
       <Link href="/" className="mb-8 flex items-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8 text-primary">
-          <path fillRule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clipRule="evenodd" />
-        </svg>
+        <Stethoscope className="h-8 w-8 text-primary" />
         <h1 className="text-2xl font-bold tracking-tight text-foreground font-headline text-primary">MARUTHI CLINIC</h1>
       </Link>
 
       <Card className="w-full max-w-md shadow-xl border-primary/10">
         <CardHeader className="text-center space-y-1">
           <div className="mx-auto mb-2 bg-primary/10 p-3 rounded-full w-fit">
-            <Stethoscope className="h-8 w-8 text-primary" />
+            <ShieldAlert className="h-8 w-8 text-primary" />
           </div>
           <CardTitle className="text-2xl font-headline">Doctor Portal</CardTitle>
-          <CardDescription>Secure access for healthcare providers.</CardDescription>
+          <CardDescription>Secure biometric access for verified medical staff.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="password" onValueChange={setLoginMethod} className="w-full">
+          <Tabs defaultValue="password" onValueChange={(v) => { setLoginMethod(v); setSelectedDoctor(null); setSearchTerm(''); }} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="password" className="flex items-center gap-2">
                 <KeyRound className="h-4 w-4" /> Credentials
@@ -129,29 +153,95 @@ export default function DoctorLoginPage() {
 
             <TabsContent value="faceid">
               <div className="space-y-4">
-                <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden rounded-lg bg-black/5 border-2 border-dashed border-primary/20">
-                  <video ref={videoRef} className="w-full aspect-video object-cover" autoPlay muted playsInline />
-                  {isVerifying && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary/20 backdrop-blur-sm">
-                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mb-2"></div>
-                      <p className="text-sm font-semibold text-primary-foreground drop-shadow-md">Verifying Identity...</p>
+                {!selectedDoctor ? (
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Staff Identity</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search medical staff..." 
+                        className="pl-9"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
                     </div>
-                  )}
-                </div>
-                <Button 
-                  onClick={handleFaceIdVerification} 
-                  className="w-full h-11"
-                  disabled={hasCameraPermission !== true || isVerifying}
-                >
-                  {isVerifying ? 'Verifying...' : 'Verify Identity'}
-                </Button>
+                    <ScrollArea className="h-[180px] rounded-md border bg-muted/20">
+                      <div className="p-2 space-y-1">
+                        {filteredDoctors.map((d) => (
+                          <button
+                            key={d.id}
+                            onClick={() => setSelectedDoctor(d)}
+                            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-primary/10 hover:border-primary/30 border border-transparent transition-all group"
+                          >
+                            <div className="text-left">
+                              <p className="text-sm font-bold group-hover:text-primary">Dr. {d.firstName} {d.lastName}</p>
+                              <p className="text-[10px] text-muted-foreground">{d.specialty || d.specialization}</p>
+                            </div>
+                            <User className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+                          </button>
+                        ))}
+                        {searchTerm && filteredDoctors.length === 0 && (
+                          <div className="text-center py-8 text-xs text-muted-foreground">
+                            No medical record matches your search.
+                          </div>
+                        )}
+                        {!searchTerm && (
+                          <div className="text-center py-8 text-[10px] text-muted-foreground uppercase font-bold opacity-50">
+                            Search to begin verification
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between bg-primary/10 p-4 rounded-xl border border-primary/20">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-full border-2 border-primary/20 overflow-hidden bg-card shadow-sm">
+                          <img src={selectedDoctor.faceImage} alt="Staff" className="h-full w-full object-cover" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-primary">Dr. {selectedDoctor.firstName} {selectedDoctor.lastName}</p>
+                          <Badge className="text-[8px] bg-green-600">ID Verified Staff</Badge>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-[10px] h-7" onClick={() => setSelectedDoctor(null)}>Change</Button>
+                    </div>
+
+                    <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden rounded-2xl bg-black border-2 border-primary/30 shadow-2xl">
+                      <video ref={videoRef} className="w-full aspect-video object-cover opacity-80" autoPlay muted playsInline />
+                      
+                      {/* Biometric Scanning Line Effect */}
+                      <div className="absolute top-0 left-0 w-full h-1 bg-primary/40 animate-[scan_2s_linear_infinite]" />
+                      
+                      {isVerifying && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary/50 backdrop-blur-md">
+                          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent mb-3"></div>
+                          <p className="text-xs font-bold text-white tracking-widest uppercase shadow-sm">Authenticating Doctor...</p>
+                        </div>
+                      )}
+                    </div>
+                    <Button 
+                      onClick={handleFaceIdVerification} 
+                      className="w-full h-12 shadow-lg gap-2"
+                      disabled={hasCameraPermission !== true || isVerifying}
+                    >
+                      {isVerifying ? 'Scanning...' : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" /> 
+                          Authorize Access
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>
         </CardContent>
         <CardFooter className="flex flex-col items-center gap-2 border-t pt-6">
           <div className="text-sm text-muted-foreground">
-            Need an account? <Link href="/doctor/register" className="font-semibold text-primary hover:underline">Apply for Access</Link>
+            Identity mismatch? <Link href="/doctor/register" className="font-semibold text-primary hover:underline">Apply for Re-Verification</Link>
           </div>
         </CardFooter>
       </Card>
