@@ -44,7 +44,7 @@ export const removeStorageItem = (key: string): void => {
 export const seedStorage = () => {
   if (typeof window === 'undefined') return;
 
-  const SEED_KEY = 'maruthi_clinic_v1.2.2_dashboard_fix';
+  const SEED_KEY = 'maruthi_clinic_v1.2.3_doctors_update';
 
   if (!localStorage.getItem(SEED_KEY)) {
     // 1. Core User Collections
@@ -65,6 +65,6 @@ export const seedStorage = () => {
     
     // Mark as seeded to prevent overwriting user data on next reload
     localStorage.setItem(SEED_KEY, 'true');
-    console.log("Maruthi Clinic: Professional storage seeded with expanded appointments and medications.");
+    console.log("Maruthi Clinic: Professional storage seeded with requested doctor names.");
   }
 };

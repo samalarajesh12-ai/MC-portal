@@ -87,9 +87,11 @@ export default function AppointmentsPage() {
     if (!formData.doctorId || !formData.date || !formData.time) return;
 
     const doctor = doctors.find(d => d.id === formData.doctorId);
+    const doctorFullName = `Dr. ${doctor?.firstName || ''} ${doctor?.lastName || ''}`.trim();
+    
     const newApp = {
       id: crypto.randomUUID(),
-      doctor: doctor?.name || doctor?.firstName || 'Clinical Provider',
+      doctor: doctorFullName || 'Clinical Provider',
       department: doctor?.specialty || doctor?.specialization || 'General Clinic',
       date: formData.date,
       time: formData.time,
@@ -163,7 +165,7 @@ export default function AppointmentsPage() {
                       <SelectContent>
                           {doctors.map((doctor) => (
                               <SelectItem key={doctor.id} value={doctor.id}>
-                                  {doctor.firstName || doctor.name} ({doctor.specialization || doctor.specialty})
+                                  Dr. {doctor.firstName} {doctor.lastName || ''} ({doctor.specialization || doctor.specialty})
                               </SelectItem>
                           ))}
                       </SelectContent>
