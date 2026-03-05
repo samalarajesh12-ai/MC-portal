@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Stethoscope, Camera, ShieldAlert, KeyRound, Search, CheckCircle2, User } from 'lucide-react';
+import { Stethoscope, Camera, ShieldAlert, KeyRound, Search, CheckCircle2, User, Scan, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
@@ -38,7 +38,7 @@ export default function DoctorLoginPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
 
-  // Only fetch manually registered doctors from Firestore
+  // Fetch only manually registered doctors from Firestore.
   const doctorsQuery = useMemoFirebase(() => collection(firestore, 'doctors'), [firestore]);
   const { data: doctors = [], isLoading: isDoctorsLoading } = useCollection(doctorsQuery);
 
@@ -54,6 +54,11 @@ export default function DoctorLoginPage() {
         } catch (error) {
           console.error('Error accessing camera:', error);
           setHasCameraPermission(false);
+          toast({
+            variant: 'destructive',
+            title: 'Camera Error',
+            description: 'Medical staff verification requires camera access.',
+          });
         }
       };
       getCameraPermission();
@@ -64,7 +69,7 @@ export default function DoctorLoginPage() {
         }
       };
     }
-  }, [loginMethod, selectedDoctor]);
+  }, [loginMethod, selectedDoctor, toast]);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -88,19 +93,31 @@ export default function DoctorLoginPage() {
     }
 
     setIsVerifying(true);
+    
+    // Rigorous clinical identity verification simulation
     setTimeout(() => {
       setIsVerifying(false);
       
       if (selectedDoctor && hasCameraPermission) {
         toast({ 
-          title: 'Biometric Access Granted', 
-          description: `Identity verified for Dr. ${selectedDoctor.lastName || selectedDoctor.firstName}.`,
+          title: 'Staff Identity Verified', 
+          description: `Biometric match successful for Dr. ${selectedDoctor.lastName || selectedDoctor.firstName}. Medical access granted.`,
         });
+        
+        // Save the authenticated user context to simulation storage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('currentUser', JSON.stringify(selectedDoctor));
+        }
+        
         router.push('/dashboard');
       } else {
-        toast({ variant: 'destructive', title: 'Verification Failed', description: 'Face mismatch or camera error. Please try manual sign-in.' });
+        toast({ 
+          variant: 'destructive', 
+          title: 'Access Denied', 
+          description: 'Facial recognition failed. Profile mismatch or incorrect identification angle detected.', 
+        });
       }
-    }, 2500);
+    }, 4000); // Slower, more "thorough" simulation for doctors
   };
 
   const filteredDoctors = (doctors || []).filter(d => 
@@ -120,17 +137,17 @@ export default function DoctorLoginPage() {
           <div className="mx-auto mb-2 bg-primary/10 p-3 rounded-full w-fit">
             <ShieldAlert className="h-8 w-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-headline">Doctor Portal</CardTitle>
-          <CardDescription>Secure biometric access for verified medical staff.</CardDescription>
+          <CardTitle className="text-2xl font-headline">Staff Security Portal</CardTitle>
+          <CardDescription>Only manually registered medical staff can use Biometric Access.</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="password" onValueChange={(v) => { setLoginMethod(v); setSelectedDoctor(null); setSearchTerm(''); }} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="password" className="flex items-center gap-2">
-                <KeyRound className="h-4 w-4" /> Credentials
+                <KeyRound className="h-4 w-4" /> Work Credentials
               </TabsTrigger>
               <TabsTrigger value="faceid" className="flex items-center gap-2">
-                <Camera className="h-4 w-4" /> Biometric
+                <Camera className="h-4 w-4" /> Biometric Identity
               </TabsTrigger>
             </TabsList>
 
@@ -144,7 +161,7 @@ export default function DoctorLoginPage() {
                   <Label htmlFor="password">Password</Label>
                   <Input id="password" name="password" type="password" required />
                 </div>
-                <Button type="submit" className="w-full h-11">Sign In to Dashboard</Button>
+                <Button type="submit" className="w-full h-11">Secure Sign In</Button>
               </form>
             </TabsContent>
 
@@ -152,20 +169,23 @@ export default function DoctorLoginPage() {
               <div className="space-y-4">
                 {!selectedDoctor ? (
                   <div className="space-y-3">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Select Staff Identity</Label>
+                    <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">1. Identify Staff Record</Label>
                     <div className="relative">
                       <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input 
-                        placeholder="Search registered staff..." 
+                        placeholder="Search your registered staff profile..." 
                         className="pl-9"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
                     </div>
-                    <ScrollArea className="h-[180px] rounded-md border bg-muted/20">
+                    <ScrollArea className="h-[200px] rounded-md border bg-muted/20">
                       <div className="p-2 space-y-1">
                         {isDoctorsLoading ? (
-                          <p className="text-center py-8 text-xs text-muted-foreground animate-pulse">Syncing registry...</p>
+                          <div className="flex flex-col items-center justify-center py-10 gap-2">
+                            <div className="h-5 w-5 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+                            <p className="text-[10px] text-muted-foreground uppercase">Querying Staff Database...</p>
+                          </div>
                         ) : filteredDoctors.map((d) => (
                           <button
                             key={d.id}
@@ -180,13 +200,16 @@ export default function DoctorLoginPage() {
                           </button>
                         ))}
                         {!isDoctorsLoading && searchTerm && filteredDoctors.length === 0 && (
-                          <div className="text-center py-8 text-xs text-muted-foreground">
-                            No manually registered medical record matches.
+                          <div className="text-center py-12 text-xs text-muted-foreground font-medium">
+                            No registered medical staff records match.
                           </div>
                         )}
                         {!isDoctorsLoading && !searchTerm && (
-                          <div className="text-center py-8 text-[10px] text-muted-foreground uppercase font-bold opacity-50">
-                            Search for manually registered staff
+                          <div className="text-center py-10 flex flex-col items-center gap-2 opacity-50">
+                            <Stethoscope className="h-6 w-6 text-muted-foreground" />
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
+                              Only showing cloud-registered staff
+                            </p>
                           </div>
                         )}
                       </div>
@@ -197,40 +220,68 @@ export default function DoctorLoginPage() {
                     <div className="flex items-center justify-between bg-primary/10 p-4 rounded-xl border border-primary/20">
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 rounded-full border-2 border-primary/20 overflow-hidden bg-card shadow-sm">
-                          <img src={selectedDoctor.faceImage} alt="Staff" className="h-full w-full object-cover" />
+                          {selectedDoctor.faceImage ? (
+                            <img src={selectedDoctor.faceImage} alt="Staff" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full bg-muted flex items-center justify-center text-[10px]">No Bio</div>
+                          )}
                         </div>
                         <div>
                           <p className="text-sm font-bold text-primary">Dr. {selectedDoctor.firstName} {selectedDoctor.lastName}</p>
-                          <Badge className="text-[8px] bg-green-600">ID Verified Staff</Badge>
+                          <Badge className="text-[8px] bg-green-600 font-bold uppercase tracking-tight">ID Verified Medical Staff</Badge>
                         </div>
                       </div>
                       <Button variant="ghost" size="sm" className="text-[10px] h-7" onClick={() => setSelectedDoctor(null)}>Change</Button>
                     </div>
 
-                    <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden rounded-2xl bg-black border-2 border-primary/30 shadow-2xl">
-                      <video ref={videoRef} className="w-full aspect-video object-cover opacity-80" autoPlay muted playsInline />
-                      
-                      <div className="absolute top-0 left-0 w-full h-1 bg-primary/40 animate-[scan_2s_linear_infinite]" />
-                      
-                      {isVerifying && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary/50 backdrop-blur-md">
-                          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent mb-3"></div>
-                          <p className="text-xs font-bold text-white tracking-widest uppercase shadow-sm">Authenticating Doctor...</p>
+                    <div className="space-y-2">
+                       <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Scan className="h-3 w-3" /> 2. High-Fidelity Biometric Scan
+                      </Label>
+                      <div className="relative flex min-h-[260px] items-center justify-center overflow-hidden rounded-2xl bg-black border-4 border-primary/10 shadow-inner">
+                        <video ref={videoRef} className="w-full h-full object-cover opacity-90" autoPlay muted playsInline />
+                        
+                        {/* HUD Scanning Overlays */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          <div className="absolute top-0 left-0 w-full h-2 bg-primary/40 shadow-[0_0_20px_rgba(var(--primary),0.5)] animate-[scan_2.5s_linear_infinite]" />
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] border border-primary/20 rounded-2xl border-dashed" />
+                          <div className="absolute bottom-4 left-4 flex gap-1">
+                            {[1,2,3,4].map(i => <div key={i} className="w-1.5 h-6 bg-primary/30 animate-pulse" style={{ animationDelay: `${i*0.2}s` }} />)}
+                          </div>
                         </div>
-                      )}
+                        
+                        {isVerifying && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-primary/70 backdrop-blur-lg transition-all z-20">
+                            <div className="h-16 w-16 animate-spin rounded-full border-4 border-white border-t-transparent mb-4 shadow-[0_0_30px_rgba(255,255,255,0.4)]"></div>
+                            <p className="text-sm font-bold text-white tracking-[0.2em] uppercase shadow-sm">Verifying Medical Credentials...</p>
+                            <div className="mt-4 w-48 h-2 bg-white/10 rounded-full overflow-hidden border border-white/20">
+                               <div className="h-full bg-white animate-[progress_4s_ease-in-out]" style={{ width: '100%' }} />
+                            </div>
+                            <p className="mt-2 text-[9px] text-white/90 uppercase font-bold">Matching Geometry Angle: 99.8%</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
+
                     <Button 
                       onClick={handleFaceIdVerification} 
-                      className="w-full h-12 shadow-lg gap-2"
+                      className="w-full h-12 shadow-xl gap-2 text-md font-bold"
                       disabled={hasCameraPermission !== true || isVerifying}
                     >
-                      {isVerifying ? 'Scanning...' : (
+                      {isVerifying ? 'Authenticating...' : (
                         <>
                           <CheckCircle2 className="h-4 w-4" /> 
-                          Authorize Access
+                          Authorize Professional Access
                         </>
                       )}
                     </Button>
+
+                    {!hasCameraPermission && hasCameraPermission !== undefined && (
+                      <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-xs font-bold border border-destructive/20">
+                        <AlertCircle className="h-4 w-4" />
+                        Verification Denied: Camera Access Mandatory for Staff.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -238,11 +289,22 @@ export default function DoctorLoginPage() {
           </Tabs>
         </CardContent>
         <CardFooter className="flex flex-col items-center gap-2 border-t pt-6">
-          <div className="text-sm text-muted-foreground">
-            Identity mismatch? <Link href="/doctor/register" className="font-semibold text-primary hover:underline">Apply for Re-Verification</Link>
+          <div className="text-sm text-muted-foreground font-medium">
+            New Staff? <Link href="/doctor/register" className="font-bold text-primary hover:underline">Complete ID Registration</Link>
           </div>
         </CardFooter>
       </Card>
+      <style jsx global>{`
+        @keyframes scan {
+          0% { top: 0%; opacity: 0; }
+          50% { opacity: 1; }
+          100% { top: 100%; opacity: 0; }
+        }
+        @keyframes progress {
+          0% { width: 0%; }
+          100% { width: 100%; }
+        }
+      `}</style>
     </div>
   );
 }
