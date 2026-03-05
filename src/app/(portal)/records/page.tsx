@@ -32,12 +32,17 @@ import {
 import { getStorageItem, seedStorage } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { FileDown } from 'lucide-react';
+import { FileDown, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
 
 export default function RecordsPage() {
+  const { toast } = useToast();
   const [medicalHistory, setMedicalHistory] = useState<any>(null);
   const [labResults, setLabResults] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -48,9 +53,157 @@ export default function RecordsPage() {
       conditions: []
     });
     const labs = getStorageItem<any[]>('labResults', []);
+    const currentUser = getStorageItem<any>('currentUser', null);
+    
     setMedicalHistory(history);
     setLabResults(labs);
+    setUser(currentUser);
   }, []);
+
+  const downloadFullReport = async () => {
+    setIsGenerating(true);
+    try {
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFontSize(24);
+      doc.setTextColor(10, 100, 100);
+      doc.text('MARUTHI CLINIC', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text('Comprehensive Clinical Medical Report', 105, 28, { align: 'center' });
+      doc.line(20, 35, 190, 35);
+
+      // Patient Identity
+      doc.setFontSize(14);
+      doc.setTextColor(0);
+      doc.setFont(undefined, 'bold');
+      doc.text('PATIENT IDENTITY', 20, 45);
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Full Name: ${user?.firstName} ${user?.lastName || ''}`, 20, 52);
+      doc.text(`Patient ID: ${user?.id}`, 20, 58);
+      doc.text(`Date of Birth: ${user?.dateOfBirth || user?.dob || 'Not specified'}`, 20, 64);
+      doc.text(`Blood Group: ${user?.bloodGroup || 'Not specified'}`, 20, 70);
+      doc.text(`Contact: ${user?.contactNumber || 'Not specified'}`, 20, 76);
+
+      // Medical History Section
+      let currentY = 90;
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('MEDICAL HISTORY', 20, currentY);
+      doc.line(20, currentY + 2, 80, currentY + 2);
+      
+      currentY += 10;
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'bold');
+      doc.text('Chronic Conditions:', 20, currentY);
+      doc.setFont(undefined, 'normal');
+      currentY += 6;
+      if (medicalHistory?.conditions?.length > 0) {
+        medicalHistory.conditions.forEach((c: any) => {
+          doc.text(`- ${c.name} (Diagnosed: ${c.diagnosed})`, 25, currentY);
+          currentY += 6;
+        });
+      } else {
+        doc.text('No recorded chronic conditions.', 25, currentY);
+        currentY += 6;
+      }
+
+      currentY += 4;
+      doc.setFont(undefined, 'bold');
+      doc.text('Known Allergies:', 20, currentY);
+      doc.setFont(undefined, 'normal');
+      currentY += 6;
+      if (medicalHistory?.allergies?.length > 0) {
+        medicalHistory.allergies.forEach((a: any) => {
+          doc.text(`- ${a.name} (Reaction: ${a.reaction})`, 25, currentY);
+          currentY += 6;
+        });
+      } else {
+        doc.text('No known allergies.', 25, currentY);
+        currentY += 6;
+      }
+
+      // Past Surgeries
+      currentY += 10;
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('SURGICAL RECORDS', 20, currentY);
+      doc.line(20, currentY + 2, 80, currentY + 2);
+      currentY += 10;
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      if (medicalHistory?.surgeries?.length > 0) {
+        medicalHistory.surgeries.forEach((s: any) => {
+          doc.text(`- ${s.name} (${s.date})`, 25, currentY);
+          currentY += 6;
+        });
+      } else {
+        doc.text('No surgical history recorded.', 25, currentY);
+        currentY += 6;
+      }
+
+      // Billing Summary Audit
+      currentY += 15;
+      const bills = getStorageItem<any[]>('bills', []);
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('BILLING AUDIT SUMMARY', 20, currentY);
+      doc.line(20, currentY + 2, 80, currentY + 2);
+      currentY += 10;
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      
+      let totalSpent = 0;
+      let totalGST = 0;
+
+      if (bills.length > 0) {
+        bills.forEach((b: any) => {
+          const gst = b.amount * 0.025;
+          const total = b.amount + gst;
+          totalSpent += total;
+          totalGST += gst;
+          doc.text(`${b.date}: ${b.service} - Rs ${total.toLocaleString()}`, 25, currentY);
+          currentY += 6;
+          if (currentY > 260) {
+            doc.addPage();
+            currentY = 20;
+          }
+        });
+        
+        currentY += 10;
+        doc.setFont(undefined, 'bold');
+        doc.text(`Total Cumulative Spending: Rs ${totalSpent.toLocaleString()}`, 20, currentY);
+        currentY += 6;
+        doc.text(`Total Clinical Tax (GST 2.5%) Paid: Rs ${totalGST.toLocaleString()}`, 20, currentY);
+      } else {
+        doc.text('No billing history available.', 25, currentY);
+      }
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Generated on: ${new Date().toLocaleString()} | Maruthi Clinic Portal v1.1.0`, 105, 285, { align: 'center' });
+
+      doc.save(`Medical_Report_${user?.firstName || 'Patient'}.pdf`);
+      
+      toast({
+        title: "Medical Report Ready",
+        description: "Comprehensive PDF profile has been generated.",
+      });
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      toast({
+        variant: "destructive",
+        title: "Report Error",
+        description: "Failed to compile medical report.",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   if (!isMounted || !medicalHistory) {
     return (
@@ -67,9 +220,15 @@ export default function RecordsPage() {
           <TabsTrigger value="history">Medical History</TabsTrigger>
           <TabsTrigger value="results">Lab Results</TabsTrigger>
         </TabsList>
-        <Button size="sm" variant="outline" className="gap-2">
-            <FileDown className="h-4 w-4"/>
-            Download All Records
+        <Button 
+          size="sm" 
+          variant="outline" 
+          className="gap-2"
+          disabled={isGenerating}
+          onClick={downloadFullReport}
+        >
+            {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4"/>}
+            Download Full Clinical Report
         </Button>
       </div>
       <TabsContent value="history" className="mt-4">

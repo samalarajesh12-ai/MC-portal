@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -39,10 +40,13 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
-  Activity
+  Activity,
+  Loader2
 } from 'lucide-react';
 import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const paymentMethodIcons = {
     'Debit Card': <CreditCard className="h-4 w-4" />,
@@ -57,6 +61,8 @@ export default function BillsPage() {
   const [bills, setBills] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedBillId, setExpandedBillId] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
   
   const [editingBill, setEditingBill] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -64,7 +70,9 @@ export default function BillsPage() {
   useEffect(() => {
     seedStorage();
     const storedBills = getStorageItem<any[]>('bills', []);
+    const currentUser = getStorageItem<any>('currentUser', null);
     setBills(storedBills);
+    setUser(currentUser);
   }, []);
 
   const calculateGST = (amount: number) => amount * 0.025;
@@ -82,6 +90,107 @@ export default function BillsPage() {
       title: "Bill Updated",
       description: `Payment details for ${editingBill.service} synchronized.`,
     });
+  };
+
+  const downloadBillPDF = async (bill: any) => {
+    setIsGenerating(bill.id);
+    try {
+      const doc = new jsPDF();
+      const subtotal = bill.amount;
+      const gst = calculateGST(subtotal);
+      const total = calculateTotal(subtotal);
+
+      // Header
+      doc.setFontSize(22);
+      doc.setTextColor(10, 100, 100);
+      doc.text('MARUTHI CLINIC', 105, 20, { align: 'center' });
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text('Excellence in Clinical Care Since 2010', 105, 28, { align: 'center' });
+      doc.line(20, 35, 190, 35);
+
+      // Patient Info
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text(`Patient: ${user?.firstName} ${user?.lastName || ''}`, 20, 45);
+      doc.text(`Bill Date: ${bill.date}`, 140, 45);
+      doc.text(`ID: ${user?.id?.substring(0, 8)}`, 20, 52);
+      doc.text(`Service: ${bill.service}`, 20, 65);
+
+      // Table Header
+      doc.setFillColor(240, 240, 240);
+      doc.rect(20, 75, 170, 10, 'F');
+      doc.setFont(undefined, 'bold');
+      doc.text('Description', 25, 82);
+      doc.text('Amount (Rs)', 160, 82, { align: 'right' });
+
+      // Table Content
+      doc.setFont(undefined, 'normal');
+      doc.text(bill.service, 25, 92);
+      doc.text(subtotal.toLocaleString(), 160, 92, { align: 'right' });
+
+      // Surgical Details
+      let currentY = 105;
+      if (bill.surgicals && bill.surgicals.length > 0) {
+        doc.setFont(undefined, 'bold');
+        doc.text('Surgicals & Consumables:', 20, currentY);
+        doc.setFont(undefined, 'normal');
+        currentY += 8;
+        bill.surgicals.forEach((item: any) => {
+          doc.text(`- ${item.name} (Qty: ${item.count})`, 25, currentY);
+          currentY += 6;
+        });
+      }
+
+      // Totals
+      currentY = Math.max(currentY + 10, 140);
+      doc.line(120, currentY, 190, currentY);
+      currentY += 8;
+      doc.text('Subtotal:', 125, currentY);
+      doc.text(subtotal.toLocaleString(), 185, currentY, { align: 'right' });
+      
+      currentY += 8;
+      doc.text('GST (2.5%):', 125, currentY);
+      doc.text(gst.toLocaleString(), 185, currentY, { align: 'right' });
+
+      currentY += 10;
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Grand Total:', 125, currentY);
+      doc.text(`Rs ${total.toLocaleString()}`, 185, currentY, { align: 'right' });
+
+      // Payment Method
+      currentY += 20;
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text(`Payment Method: ${bill.paymentMethod}`, 20, currentY);
+      if (bill.paymentDetails) {
+        currentY += 6;
+        doc.text(`Details: ${bill.paymentDetails}`, 20, currentY);
+      }
+
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text('This is a computer-generated invoice and does not require a physical signature.', 105, 280, { align: 'center' });
+
+      doc.save(`Invoice_${bill.id.substring(0, 8)}.pdf`);
+      
+      toast({
+        title: "Download Complete",
+        description: `Invoice for ${bill.service} saved successfully.`,
+      });
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description: "Could not generate PDF at this time.",
+      });
+    } finally {
+      setIsGenerating(null);
+    }
   };
 
   const filteredBills = bills.filter(b => 
@@ -161,7 +270,7 @@ export default function BillsPage() {
                           {bill.paymentMethod}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-2">
                         <Button 
                           size="sm" 
                           variant="ghost" 
@@ -169,6 +278,16 @@ export default function BillsPage() {
                           onClick={() => { setEditingBill(bill); setIsEditDialogOpen(true); }}
                         >
                           Edit
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8 gap-1.5"
+                          disabled={isGenerating === bill.id}
+                          onClick={() => downloadBillPDF(bill)}
+                        >
+                          {isGenerating === bill.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3" />}
+                          PDF
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -208,8 +327,14 @@ export default function BillsPage() {
                                    <p className="text-[10px] text-muted-foreground pt-1 border-t italic">{bill.paymentDetails}</p>
                                  )}
                                </div>
-                               <Button size="sm" className="w-full gap-2 mt-2">
-                                 <FileDown className="h-4 w-4" /> Download PDF Invoice
+                               <Button 
+                                 size="sm" 
+                                 className="w-full gap-2 mt-2"
+                                 disabled={isGenerating === bill.id}
+                                 onClick={() => downloadBillPDF(bill)}
+                                >
+                                 {isGenerating === bill.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+                                 Download PDF Invoice
                                </Button>
                             </div>
                           </div>
