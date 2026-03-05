@@ -44,8 +44,8 @@ export const removeStorageItem = (key: string): void => {
 export const seedStorage = () => {
   if (typeof window === 'undefined') return;
 
-  // Bumped version for Dr. Raj Kumar update and additional initial appointments
-  const SEED_KEY = 'maruthi_clinic_v1.2.4_final_sync';
+  // Bumped version for 2026 year update
+  const SEED_KEY = 'maruthi_clinic_v1.2.5_year_2026_sync';
 
   if (!localStorage.getItem(SEED_KEY)) {
     // 1. Core User Collections
@@ -66,6 +66,6 @@ export const seedStorage = () => {
     
     // Mark as seeded to prevent overwriting user data on next reload
     localStorage.setItem(SEED_KEY, 'true');
-    console.log("Maruthi Clinic: Professional storage seeded with final doctor list and appointments.");
+    console.log("Maruthi Clinic: Professional storage seeded with 2026 appointments.");
   }
 };
