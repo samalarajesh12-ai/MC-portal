@@ -165,11 +165,18 @@ export default function PortalLayout({
   const firestore = useFirestore();
 
   // Determine role from Firestore profile
-  const patientRef = useMemoFirebase(() => user ? doc(firestore, 'patients', user.uid) : null, [firestore, user]);
-  const doctorRef = useMemoFirebase(() => user ? doc(firestore, 'doctors', user.uid) : null, [firestore, user]);
+  const patientProfileQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'patients'), where('id', '==', user.uid)) : null,
+    [firestore, user]
+  );
   
-  const { data: patientProfile } = useCollection(user ? query(collection(firestore, 'patients'), where('id', '==', user.uid)) : null);
-  const { data: doctorProfile } = useCollection(user ? query(collection(firestore, 'doctors'), where('id', '==', user.uid)) : null);
+  const doctorProfileQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'doctors'), where('id', '==', user.uid)) : null,
+    [firestore, user]
+  );
+
+  const { data: patientProfile } = useCollection(patientProfileQuery);
+  const { data: doctorProfile } = useCollection(doctorProfileQuery);
 
   const role = doctorProfile && doctorProfile.length > 0 ? 'doctor' : 'patient';
   const activeNavItems = role === 'doctor' ? doctorNavItems : navItems;
