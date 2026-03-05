@@ -1,9 +1,17 @@
 # MARUTHI CLINIC PORTAL
 
-A professional, data-driven clinic management system for patients and doctors.
+A professional, data-driven clinic management system built with the **Next.js + Firebase + ShadCN** preset.
+
+## Technical Stack
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS
+- **UI Components**: ShadCN UI (Radix UI)
+- **Icons**: Lucide React
+- **Database**: Local Storage (Current) / Firebase Firestore (Ready)
+- **Authentication**: Custom Biometric Logic / Firebase Auth (Ready)
 
 ## Understanding Data Storage
-This application uses a **Local Storage Database** (`localStorage`) to store all clinical records, registrations, and updates. 
+This application currently uses a **Local Storage Database** (`localStorage`) to store all clinical records, registrations, and updates. 
 
 ### Critical Note for Deployment:
 - **Scope**: Local storage is private to your specific browser and domain. 
@@ -35,7 +43,7 @@ This application uses a **Local Storage Database** (`localStorage`) to store all
    - Click **Deploy**.
 
 ## Features
-- **Doctor Portal**: Surgical performance analytics, success rate charts, and operation registries.
-- **Patient Portal**: Chronic disease profiling, chronological appointment tracking, and Rupee-based billing.
-- **Biometric Identity**: Registration with webcam capture or professional portrait upload.
+- **Doctor Portal**: Specialized interface for surgical performance analytics and operation registries.
+- **Patient Portal**: Focused dashboard for chronic disease profiling and chronological visit tracking.
+- **Biometric Identity**: Secure registration with webcam capture or professional portrait upload.
 - **Persistence**: Automatic background synchronization with browser storage.
