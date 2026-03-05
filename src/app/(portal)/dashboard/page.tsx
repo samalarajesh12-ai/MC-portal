@@ -61,7 +61,7 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
-import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useUser, useDoc, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where, orderBy, limit } from 'firebase/firestore';
 
 const COMMON_DISEASES = [
@@ -246,14 +246,14 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold font-headline text-primary">
-            Medical Performance Dashboard
+            Medical Staff Dashboard
           </h1>
           <p className="text-muted-foreground">Dr. {user.lastName || user.firstName} | {user.specialty || user.specialization || 'Medical Specialist'}</p>
         </div>
         <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>Edit Profile & Face</Button>
+           <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>Edit Profile</Button>
            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 py-1 px-3">
-             <Award className="h-3 w-3 mr-1" /> Gold Rated Provider
+             <Award className="h-3 w-3 mr-1" /> Cloud Verified Staff
            </Badge>
         </div>
       </div>
@@ -266,7 +266,7 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{doctorPerformance.totalSurgeries}</div>
-            <p className="text-xs text-muted-foreground mt-1">+12 from last month</p>
+            <p className="text-xs text-muted-foreground mt-1">Cross-device total</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm">
@@ -276,7 +276,7 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{doctorPerformance.successRate}%</div>
-            <p className="text-xs text-muted-foreground mt-1">Top 5% in clinical group</p>
+            <p className="text-xs text-muted-foreground mt-1">Clinical excellence rating</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm">
@@ -286,7 +286,7 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{doctorPerformance.patientsSeen}</div>
-            <p className="text-xs text-muted-foreground mt-1">Lifetime consultation count</p>
+            <p className="text-xs text-muted-foreground mt-1">Lifetime consultations</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm">
@@ -296,60 +296,7 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{doctorPerformance.attendancePercentage}%</div>
-            <p className="text-xs text-muted-foreground mt-1">Consistent availability</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-4 border-primary/10">
-          <CardHeader>
-            <CardTitle>Surgical Success Metrics</CardTitle>
-            <CardDescription>Success rate percentage by operation category.</CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2 h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={doctorPerformance.successByOperation}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                <XAxis dataKey="type" tick={{fontSize: 10}} />
-                <YAxis domain={[90, 100]} />
-                <RechartsTooltip 
-                  contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}
-                  itemStyle={{ color: 'hsl(var(--primary))' }}
-                />
-                <Bar dataKey="rate" radius={[4, 4, 0, 0]}>
-                  {doctorPerformance.successByOperation.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={`hsl(var(--primary), ${1 - index * 0.2})`} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-3 border-primary/10">
-          <CardHeader>
-            <CardTitle>Recent Procedures</CardTitle>
-            <CardDescription>Surgical outcomes registry.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {previousOperations.map((op) => (
-                <div key={op.id} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold">{op.patient}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase">{op.type}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">{op.outcome}</Badge>
-                    <p className="text-[10px] text-muted-foreground mt-1">{op.date}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Button variant="outline" size="sm" className="w-full mt-6 gap-1" asChild>
-              <Link href="/doctor/operations">View All Records <ChevronRight className="h-4 w-4" /></Link>
-            </Button>
+            <p className="text-xs text-muted-foreground mt-1">Shift availability</p>
           </CardContent>
         </Card>
       </div>
@@ -357,8 +304,8 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
       <Dialog open={showEdit} onOpenChange={setShowEdit}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>Update Medical Staff Identity</DialogTitle>
-            <DialogDescription>Synchronize your contact and biometric identity records.</DialogDescription>
+            <DialogTitle>Update Staff Profile</DialogTitle>
+            <DialogDescription>Synchronize your records across all clinical devices.</DialogDescription>
           </DialogHeader>
           <ProfileEditForm 
             user={user} 
@@ -400,11 +347,11 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
           <h1 className="text-3xl font-bold font-headline text-primary">
             Welcome back, {user.firstName}!
           </h1>
-          <p className="text-muted-foreground">Comprehensive cloud-synced clinical overview.</p>
+          <p className="text-muted-foreground">Your health records are synced across all your devices.</p>
         </div>
         <div className="flex items-center gap-2">
            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 py-1 px-3">
-             <ShieldAlert className="h-3 w-3 mr-1" /> Active Medical Profile
+             <ShieldAlert className="h-3 w-3 mr-1" /> Cloud Secured Account
            </Badge>
         </div>
       </div>
@@ -417,7 +364,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{userAppointments?.length || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Confirmed clinical visits logged.</p>
+            <p className="text-xs text-muted-foreground mt-1">Next: {userAppointments?.[0]?.date || 'None scheduled'}</p>
           </CardContent>
         </Card>
         <Card className="border-primary/20 bg-card shadow-sm hover:shadow-md transition-shadow">
@@ -427,7 +374,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{refillsNeededCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Medications requiring clinical attention.</p>
+            <p className="text-xs text-muted-foreground mt-1">{refillsNeededCount > 0 ? 'Refills required soon' : 'All prescriptions active'}</p>
           </CardContent>
         </Card>
       </div>
@@ -436,29 +383,29 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
         <Card className="lg:col-span-3 border-primary/10 shadow-sm">
           <CardHeader className="flex flex-row items-center">
             <div className="grid gap-1">
-              <CardTitle>Schedule Overview</CardTitle>
-              <CardDescription>Your next medical consultations and follow-ups.</CardDescription>
+              <CardTitle>Clinical Schedule</CardTitle>
+              <CardDescription>Appointments synchronized from the cloud.</CardDescription>
             </div>
             <Button asChild size="sm" className="ml-auto gap-1">
-              <Link href="/appointments">Manage Schedule<ArrowUpRight className="h-4 w-4" /></Link>
+              <Link href="/appointments">Manage<ArrowUpRight className="h-4 w-4" /></Link>
             </Button>
           </CardHeader>
           <CardContent>
             <Table>
-              <TableHeader><TableRow><TableHead>Healthcare Provider</TableHead><TableHead>Department</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Doctor</TableHead><TableHead>Date & Time</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
               <TableBody>
                 {userAppointments && userAppointments.length > 0 ? (
                   userAppointments.map((appointment: any) => (
                     <TableRow key={appointment.id}>
                       <TableCell><div className="font-semibold text-primary">{appointment.doctor}</div></TableCell>
-                      <TableCell><Badge variant="outline">{appointment.department}</Badge></TableCell>
                       <TableCell className="text-muted-foreground">{appointment.date} @ {appointment.time}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-[10px]">{appointment.status}</Badge></TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-6 text-xs text-muted-foreground italic">
-                      No upcoming consultations scheduled.
+                      No upcoming consultations.
                     </TableCell>
                   </TableRow>
                 )}
@@ -478,11 +425,11 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label className="text-[10px] uppercase font-bold text-muted-foreground">Blood Group</Label>
-                <p className="font-bold">{user.bloodGroup || 'A+'}</p>
+                <p className="font-bold">{user.bloodGroup || 'Not specified'}</p>
               </div>
               <div className="space-y-1">
-                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Contact Registry</Label>
-                <p className="font-semibold">{user.contactNumber || 'Not provided'}</p>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Account Sync</Label>
+                <p className="font-semibold text-green-600 flex items-center gap-1"><Check className="h-3 w-3"/> Active</p>
               </div>
             </div>
             
@@ -494,14 +441,14 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
                     <Badge key={d} variant="secondary" className="text-[10px] py-0">{d}</Badge>
                   ))
                 ) : (
-                  <p className="text-[10px] italic text-muted-foreground">No chronic conditions listed.</p>
+                  <p className="text-[10px] italic text-muted-foreground">None listed.</p>
                 )}
               </div>
             </div>
           </CardContent>
           <CardFooter>
              <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => setShowProfileDialog(true)}>
-               Synchronize Records & Identity
+               Synchronize Profile & Identity
              </Button>
           </CardFooter>
         </Card>
@@ -510,8 +457,8 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
       <Dialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-headline text-primary">Synchronize Medical Identity</DialogTitle>
-            <DialogDescription>Maintain your clinical history and biometric identity for secure cloud access.</DialogDescription>
+            <DialogTitle className="text-2xl font-headline text-primary">Cloud Profile Sync</DialogTitle>
+            <DialogDescription>Your clinical history and biometric identity are stored securely in the cloud.</DialogDescription>
           </DialogHeader>
           <ProfileEditForm 
             user={user} 
@@ -529,7 +476,6 @@ export default function DashboardPage() {
   const firestore = useFirestore();
   const { user: firebaseUser, isUserLoading } = useUser();
   
-  // Use the firestore user profile instead of localStorage
   const userProfileRef = useMemoFirebase(() => firebaseUser ? doc(firestore, 'patients', firebaseUser.uid) : null, [firestore, firebaseUser]);
   const doctorProfileRef = useMemoFirebase(() => firebaseUser ? doc(firestore, 'doctors', firebaseUser.uid) : null, [firestore, firebaseUser]);
   
@@ -544,26 +490,24 @@ export default function DashboardPage() {
     
     updateDocumentNonBlocking(userRef, updatedUser);
 
-    // Create a clinical update notification in cloud
     const notificationsRef = collection(firestore, 'notifications');
     addDocumentNonBlocking(notificationsRef, {
-      id: crypto.randomUUID(),
       userId: updatedUser.id,
-      title: 'Clinical Profile Synchronized',
-      description: 'Your contact information and biometric identity have been updated successfully in the cloud.',
+      title: 'Profile Synchronized',
+      description: 'Your clinical records have been updated across all devices.',
       time: format(new Date(), 'h:mm a'),
       type: 'profile',
       read: false,
       createdAt: new Date().toISOString()
     });
 
-    toast({ title: "Clinical Synchronization Success", description: "Your clinical records have been updated in real-time across all devices." });
+    toast({ title: "Cloud Synchronization Success", description: "Your clinical records are now updated everywhere." });
   };
 
   if (isUserLoading || isPatientLoading || isDoctorLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p className="text-muted-foreground animate-pulse font-medium">Synchronizing clinical environment...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Syncing with cloud registry...</p>
       </div>
     );
   }
@@ -571,8 +515,8 @@ export default function DashboardPage() {
   if (!activeUser) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
-        <p className="text-muted-foreground font-medium">Identity synchronization failed or session expired.</p>
-        <Button asChild><Link href="/">Return to Login</Link></Button>
+        <p className="text-muted-foreground font-medium">No cloud profile found for this account.</p>
+        <Button asChild><Link href="/">Log out and try again</Link></Button>
       </div>
     );
   }
