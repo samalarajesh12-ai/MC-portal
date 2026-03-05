@@ -71,7 +71,7 @@ export default function BillsPage() {
     user ? query(collection(firestore, 'bills'), where('patientId', '==', user.uid)) : null, 
     [firestore, user]
   );
-  const { data: bills = [], isLoading } = useCollection(billsQuery);
+  const { data: bills, isLoading } = useCollection(billsQuery);
 
   const calculateGST = (amount: number) => amount * 0.025;
   const calculateTotal = (amount: number) => amount + calculateGST(amount);
@@ -168,7 +168,7 @@ export default function BillsPage() {
     }
   };
 
-  const filteredBills = bills.filter(b => 
+  const filteredBills = (bills || []).filter(b => 
     b.service.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
