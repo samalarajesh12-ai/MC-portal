@@ -8,7 +8,11 @@ import {
   StethoscopeIcon,
   ActivityIcon,
   UserCheckIcon,
-  TrendingUpIcon
+  TrendingUpIcon,
+  UsersIcon,
+  CalendarCheckIcon,
+  ClipboardListIcon,
+  PlusCircleIcon
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -28,6 +32,10 @@ export const navItems: NavItem[] = [
 
 export const doctorNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Performance', iconName: 'TrendingUpIcon' },
+  { href: '/doctor/patients', label: 'Patient Management', iconName: 'UsersIcon' },
+  { href: '/doctor/appointments', label: 'Appointment Scheduling', iconName: 'CalendarCheckIcon' },
+  { href: '/doctor/records', label: 'Medical Records Access', iconName: 'ClipboardListIcon' },
+  { href: '/doctor/prescriptions', label: 'Digital Prescriptions', iconName: 'PillIcon' },
   { href: '/doctor/operations', label: 'Operations History', iconName: 'ActivityIcon' },
   { href: '/doctor/attendance', label: 'Daily Attendance', iconName: 'UserCheckIcon' },
 ];
@@ -41,7 +49,11 @@ export const iconMap: { [key: string]: LucideIcon } = {
   StethoscopeIcon,
   ActivityIcon,
   UserCheckIcon,
-  TrendingUpIcon
+  TrendingUpIcon,
+  UsersIcon,
+  CalendarCheckIcon,
+  ClipboardListIcon,
+  PlusCircleIcon
 };
 
 export const doctorPerformance = {
@@ -75,6 +87,9 @@ export const initialAppointments = [
   {
     id: 'app1',
     doctor: 'Dr. John Smith',
+    doctorId: 'dr-smith',
+    patient: 'Robert Fox',
+    patientId: 'p1',
     department: 'Cardiology',
     date: '2024-08-15',
     time: '10:00 AM',
@@ -83,6 +98,9 @@ export const initialAppointments = [
   {
     id: 'app2',
     doctor: 'Dr. Sarah Jones',
+    doctorId: 'dr-jones',
+    patient: 'Jane Cooper',
+    patientId: 'p2',
     department: 'Dermatology',
     date: '2024-08-22',
     time: '02:30 PM',
@@ -117,7 +135,8 @@ export const initialDoctors = [
   
 export const initialMedications = [
   {
-    id: 1,
+    id: 'med1',
+    patientId: 'p1',
     name: 'Lisinopril',
     dosage: '10mg',
     frequency: 'Once a day',
@@ -125,7 +144,8 @@ export const initialMedications = [
     lastRefill: '2024-07-10',
   },
   {
-    id: 2,
+    id: 'med2',
+    patientId: 'p2',
     name: 'Metformin',
     dosage: '500mg',
     frequency: 'Twice a day',
