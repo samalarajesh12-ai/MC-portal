@@ -17,13 +17,17 @@ import { Label } from '@/components/ui/label';
 import { Stethoscope, Camera, ShieldAlert, KeyRound, Search, CheckCircle2, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
+import { useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function DoctorLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const auth = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | undefined>(undefined);
@@ -32,14 +36,11 @@ export default function DoctorLoginPage() {
   
   // Doctor Selection State
   const [searchTerm, setSearchTerm] = useState('');
-  const [doctors, setDoctors] = useState<any[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<any>(null);
 
-  useEffect(() => {
-    seedStorage();
-    const storedDoctors = getStorageItem<any[]>('doctors', []);
-    setDoctors(storedDoctors);
-  }, []);
+  // Only fetch manually registered doctors from Firestore
+  const doctorsQuery = useMemoFirebase(() => collection(firestore, 'doctors'), [firestore]);
+  const { data: doctors = [], isLoading: isDoctorsLoading } = useCollection(doctorsQuery);
 
   useEffect(() => {
     if (loginMethod === 'faceid' && selectedDoctor) {
@@ -65,21 +66,18 @@ export default function DoctorLoginPage() {
     }
   }, [loginMethod, selectedDoctor]);
 
-  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const doctorsList = getStorageItem<any[]>('doctors', []);
-    const doctor = doctorsList.find(d => d.email === email && d.password === password);
-
-    if (doctor) {
-      setStorageItem('currentUser', { ...doctor, role: 'doctor' });
-      toast({ title: 'Login Successful', description: `Welcome back, Dr. ${doctor.lastName || doctor.firstName}!` });
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: 'Login Successful', description: 'Staff dashboard synchronized.' });
       router.push('/dashboard');
-    } else {
-      toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid work credentials.' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Login Failed', description: error.message || 'Invalid work credentials.' });
     }
   };
 
@@ -94,7 +92,6 @@ export default function DoctorLoginPage() {
       setIsVerifying(false);
       
       if (selectedDoctor && hasCameraPermission) {
-        setStorageItem('currentUser', { ...selectedDoctor, role: 'doctor' });
         toast({ 
           title: 'Biometric Access Granted', 
           description: `Identity verified for Dr. ${selectedDoctor.lastName || selectedDoctor.firstName}.`,
@@ -106,7 +103,7 @@ export default function DoctorLoginPage() {
     }, 2500);
   };
 
-  const filteredDoctors = doctors.filter(d => 
+  const filteredDoctors = (doctors || []).filter(d => 
     `${d.firstName} ${d.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     d.email.toLowerCase().includes(searchTerm.toLowerCase())
   ).slice(0, 5);
@@ -159,7 +156,7 @@ export default function DoctorLoginPage() {
                     <div className="relative">
                       <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input 
-                        placeholder="Search medical staff..." 
+                        placeholder="Search registered staff..." 
                         className="pl-9"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -167,7 +164,9 @@ export default function DoctorLoginPage() {
                     </div>
                     <ScrollArea className="h-[180px] rounded-md border bg-muted/20">
                       <div className="p-2 space-y-1">
-                        {filteredDoctors.map((d) => (
+                        {isDoctorsLoading ? (
+                          <p className="text-center py-8 text-xs text-muted-foreground animate-pulse">Syncing registry...</p>
+                        ) : filteredDoctors.map((d) => (
                           <button
                             key={d.id}
                             onClick={() => setSelectedDoctor(d)}
@@ -180,14 +179,14 @@ export default function DoctorLoginPage() {
                             <User className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                           </button>
                         ))}
-                        {searchTerm && filteredDoctors.length === 0 && (
+                        {!isDoctorsLoading && searchTerm && filteredDoctors.length === 0 && (
                           <div className="text-center py-8 text-xs text-muted-foreground">
-                            No medical record matches your search.
+                            No manually registered medical record matches.
                           </div>
                         )}
-                        {!searchTerm && (
+                        {!isDoctorsLoading && !searchTerm && (
                           <div className="text-center py-8 text-[10px] text-muted-foreground uppercase font-bold opacity-50">
-                            Search to begin verification
+                            Search for manually registered staff
                           </div>
                         )}
                       </div>
@@ -211,7 +210,6 @@ export default function DoctorLoginPage() {
                     <div className="relative flex min-h-[240px] items-center justify-center overflow-hidden rounded-2xl bg-black border-2 border-primary/30 shadow-2xl">
                       <video ref={videoRef} className="w-full aspect-video object-cover opacity-80" autoPlay muted playsInline />
                       
-                      {/* Biometric Scanning Line Effect */}
                       <div className="absolute top-0 left-0 w-full h-1 bg-primary/40 animate-[scan_2s_linear_infinite]" />
                       
                       {isVerifying && (

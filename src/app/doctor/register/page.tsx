@@ -23,7 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getStorageItem, setStorageItem } from '@/lib/storage';
+import { useFirestore, useAuth } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const SPECIALTIES = [
   "Cardiology",
@@ -54,6 +57,9 @@ const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 export default function DoctorRegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const auth = useAuth();
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +91,7 @@ export default function DoctorRegisterPage() {
     };
   }, []);
   
-  const handleRegister = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!faceImage) {
         toast({
@@ -97,35 +103,49 @@ export default function DoctorRegisterPage() {
     }
 
     const formData = new FormData(event.currentTarget);
-    const doctorData = {
-      id: crypto.randomUUID(),
-      firstName: formData.get('first-name'),
-      lastName: formData.get('last-name'),
-      email: formData.get('email'),
-      mobile: formData.get('mobile'),
-      bloodGroup: formData.get('blood-group'),
-      qualification: formData.get('qualification'),
-      specialty: formData.get('specialty'),
-      experience: formData.get('experience'),
-      password: formData.get('password'),
-      faceImage: faceImage,
-      role: 'doctor'
-    };
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
 
-    const doctors = getStorageItem<any[]>('doctors', []);
-    setStorageItem('doctors', [...doctors, doctorData]);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-    toast({
-      title: 'Registration Successful',
-      description: "Your staff account has been created. You can now log in.",
-      action: (
-        <div className="flex items-center">
-          <ClipboardCheck className="mr-2 h-5 w-5 text-green-500" />
-          <span>Success</span>
-        </div>
-      ),
-    });
-    router.push('/doctor/login');
+      const doctorData = {
+        id: user.uid,
+        firstName: formData.get('first-name'),
+        lastName: formData.get('last-name'),
+        email: email,
+        mobile: formData.get('mobile'),
+        bloodGroup: formData.get('blood-group'),
+        qualification: formData.get('qualification'),
+        specialty: formData.get('specialty'),
+        experience: formData.get('experience'),
+        faceImage: faceImage,
+        role: 'doctor',
+        createdAt: new Date().toISOString()
+      };
+
+      const docRef = doc(firestore, 'doctors', user.uid);
+      setDocumentNonBlocking(docRef, doctorData, { merge: true });
+
+      toast({
+        title: 'Registration Successful',
+        description: "Your staff account has been created. You can now log in.",
+        action: (
+          <div className="flex items-center">
+            <ClipboardCheck className="mr-2 h-5 w-5 text-green-500" />
+            <span>Success</span>
+          </div>
+        ),
+      });
+      router.push('/doctor/login');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Registration Error',
+        description: error.message || 'Could not register staff account.',
+      });
+    }
   };
 
   const captureFaceImage = () => {

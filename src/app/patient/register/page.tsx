@@ -44,7 +44,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { getStorageItem, setStorageItem } from '@/lib/storage';
+import { useFirestore, useAuth } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -63,11 +66,11 @@ const formSchema = z.object({
   digitalSignature: z.string().optional(),
 });
 
-type Patient = z.infer<typeof formSchema> & { id: string; password: string; faceImage: string | null };
-
 export default function PatientRegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const auth = useAuth();
 
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState('');
@@ -121,7 +124,7 @@ export default function PatientRegisterPage() {
     };
   }, []);
 
-  const handleRegister = (values: z.infer<typeof formSchema>) => {
+  const handleRegister = async (values: z.infer<typeof formSchema>) => {
     if (!faceImage) {
       toast({
         variant: 'destructive',
@@ -132,27 +135,32 @@ export default function PatientRegisterPage() {
     }
 
     const password = Math.random().toString(36).substring(2, 10);
-    const patients = getStorageItem<Patient[]>('patients', []);
     
-    if (patients.find(p => p.email === values.email)) {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, password);
+      const user = userCredential.user;
+
+      const patientData = {
+        ...values,
+        id: user.uid,
+        faceImage,
+        role: 'patient',
+        isProfileCompleted: true,
+        createdAt: new Date().toISOString()
+      };
+
+      const docRef = doc(firestore, 'patients', user.uid);
+      setDocumentNonBlocking(docRef, patientData, { merge: true });
+
+      setGeneratedPassword(password);
+      setShowCredentialsDialog(true);
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Registration Failed',
-        description: 'An account with this email already exists.',
+        description: error.message || 'An unexpected error occurred.',
       });
-      return;
     }
-
-    const newPatient: Patient = {
-      ...values,
-      id: crypto.randomUUID(),
-      password,
-      faceImage,
-    };
-
-    setStorageItem('patients', [...patients, newPatient]);
-    setGeneratedPassword(password);
-    setShowCredentialsDialog(true);
   };
 
   const copyToClipboard = () => {

@@ -16,7 +16,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { User, Camera, ShieldAlert, KeyRound, Stethoscope, Search, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
+import { useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,6 +26,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export default function PatientLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const auth = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | undefined>(undefined);
@@ -32,14 +36,11 @@ export default function PatientLoginPage() {
   
   // Search & Selection State
   const [searchTerm, setSearchTerm] = useState('');
-  const [patients, setPatients] = useState<any[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
 
-  useEffect(() => {
-    seedStorage();
-    const storedPatients = getStorageItem<any[]>('patients', []);
-    setPatients(storedPatients);
-  }, []);
+  // Fetch only manually registered patients from Firestore
+  const patientsQuery = useMemoFirebase(() => collection(firestore, 'patients'), [firestore]);
+  const { data: patients = [], isLoading: isPatientsLoading } = useCollection(patientsQuery);
 
   useEffect(() => {
     if (loginMethod === 'faceid' && selectedPatient) {
@@ -70,21 +71,18 @@ export default function PatientLoginPage() {
     }
   }, [loginMethod, selectedPatient, toast]);
 
-  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    const patientsList = getStorageItem<any[]>('patients', []);
-    const patient = patientsList.find(p => p.email === email && p.password === password);
-
-    if (patient) {
-      setStorageItem('currentUser', patient);
-      toast({ title: 'Login Successful', description: `Welcome back, ${patient.firstName}!` });
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: 'Login Successful', description: 'Welcome to the clinical portal.' });
       router.push('/dashboard');
-    } else {
-      toast({ variant: 'destructive', title: 'Login Failed', description: 'Invalid email or password.' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Login Failed', description: error.message || 'Invalid credentials.' });
     }
   };
 
@@ -99,14 +97,12 @@ export default function PatientLoginPage() {
     }
 
     setIsVerifying(true);
-    // Simulate biometric comparison logic
     setTimeout(() => {
       setIsVerifying(false);
       
-      // Verification Logic: In a real app, we compare video frame vs selectedPatient.faceImage
-      // For this prototype, we simulate a "successful match" if the camera is active and a user is selected.
       if (selectedPatient && hasCameraPermission) {
-        setStorageItem('currentUser', selectedPatient);
+        // In a real biometric app, we'd sign in the user via a specific token
+        // For this demo, we assume the scan "authenticated" the user context
         toast({ 
           title: 'Face ID Verified!', 
           description: `Identity confirmed for ${selectedPatient.firstName} ${selectedPatient.lastName}.`,
@@ -122,7 +118,7 @@ export default function PatientLoginPage() {
     }, 2500);
   };
 
-  const filteredPatients = patients.filter(p => 
+  const filteredPatients = (patients || []).filter(p => 
     `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.email.toLowerCase().includes(searchTerm.toLowerCase())
   ).slice(0, 5);
@@ -175,7 +171,7 @@ export default function PatientLoginPage() {
                     <div className="relative">
                       <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input 
-                        placeholder="Search by name or email..." 
+                        placeholder="Search registered patients..." 
                         className="pl-9"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -183,7 +179,9 @@ export default function PatientLoginPage() {
                     </div>
                     <ScrollArea className="h-[180px] rounded-md border bg-muted/20">
                       <div className="p-2 space-y-1">
-                        {filteredPatients.map((p) => (
+                        {isPatientsLoading ? (
+                          <p className="text-center py-8 text-xs text-muted-foreground animate-pulse">Syncing registry...</p>
+                        ) : filteredPatients.map((p) => (
                           <button
                             key={p.id}
                             onClick={() => setSelectedPatient(p)}
@@ -196,14 +194,14 @@ export default function PatientLoginPage() {
                             <User className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                           </button>
                         ))}
-                        {searchTerm && filteredPatients.length === 0 && (
+                        {!isPatientsLoading && searchTerm && filteredPatients.length === 0 && (
                           <div className="text-center py-8 text-xs text-muted-foreground italic">
-                            No registered patient found.
+                            No manually registered patient found.
                           </div>
                         )}
-                        {!searchTerm && (
+                        {!isPatientsLoading && !searchTerm && (
                           <div className="text-center py-8 text-[10px] text-muted-foreground uppercase font-medium">
-                            Type to find your record...
+                            Only showing manually registered accounts
                           </div>
                         )}
                       </div>
@@ -229,7 +227,6 @@ export default function PatientLoginPage() {
                       <div className="relative flex min-h-[220px] items-center justify-center overflow-hidden rounded-xl bg-black border-2 border-primary/20 shadow-inner">
                         <video ref={videoRef} className="w-full aspect-video object-cover" autoPlay muted playsInline />
                         
-                        {/* Scanning HUD Overlay */}
                         <div className="absolute inset-0 pointer-events-none border-[1px] border-primary/10">
                           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 border-2 border-primary/30 rounded-full border-dashed animate-[spin_10s_linear_infinite]" />
                           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border border-primary/50 rounded-full" />
