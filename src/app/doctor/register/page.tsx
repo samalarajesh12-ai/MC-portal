@@ -25,6 +25,29 @@ import {
 } from '@/components/ui/select';
 import { getStorageItem, setStorageItem } from '@/lib/storage';
 
+const SPECIALTIES = [
+  "Cardiology",
+  "Dermatology",
+  "Pediatrics",
+  "Neurology",
+  "Orthopedics",
+  "Oncology",
+  "Psychiatry",
+  "Endocrinology",
+  "Gastroenterology",
+  "Nephrology",
+  "Pulmonology",
+  "Ophthalmology",
+  "ENT (Otolaryngology)",
+  "General Surgery",
+  "Gynecology",
+  "Radiology",
+  "Anesthesiology",
+  "Emergency Medicine"
+];
+
+const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
+
 export default function DoctorRegisterPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -176,10 +199,9 @@ export default function DoctorRegisterPage() {
                             <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="A+">A+</SelectItem>
-                            <SelectItem value="B+">B+</SelectItem>
-                            <SelectItem value="AB+">AB+</SelectItem>
-                            <SelectItem value="O+">O+</SelectItem>
+                            {BLOOD_GROUPS.map((group) => (
+                              <SelectItem key={group} value={group}>{group}</SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>
@@ -198,10 +220,9 @@ export default function DoctorRegisterPage() {
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Cardiology">Cardiology</SelectItem>
-                    <SelectItem value="Dermatology">Dermatology</SelectItem>
-                    <SelectItem value="Pediatrics">Pediatrics</SelectItem>
-                    <SelectItem value="Neurology">Neurology</SelectItem>
+                    {SPECIALTIES.map((spec) => (
+                      <SelectItem key={spec} value={spec}>{spec}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
