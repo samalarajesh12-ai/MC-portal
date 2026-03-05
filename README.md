@@ -2,39 +2,62 @@
 
 This is a Next.js-based patient and doctor portal for Maruthi Clinic, built using Firebase Studio.
 
-## Project Abstract
+## Deployment to GitHub
 
-### EXISTING SYSTEM
+To push your project to GitHub and set up a publishing branch, follow these steps:
 
-The initial version of the Maruthi Clinic Portal was a frontend-only prototype with a user interface built using Next.js and ShadCN components. The system featured several pages for patient interactions, such as viewing appointments, medications, and messages. However, all data was static and hardcoded within the application's source code. There was no backend database, user authentication, or persistent data storage, meaning any changes made by the user were not saved. The system served as a visual and structural foundation but lacked the functionality required for a real-world application.
+1. **Initialize Git**: Open your terminal in the project root and run:
+   ```bash
+   git init
+   ```
 
-### PROPOSED SYSTEM
+2. **Stage and Commit**:
+   ```bash
+   git add .
+   git commit -m "Feature: Professional Patient and Doctor Portals"
+   ```
 
-The proposed system transforms the prototype into a dynamic, full-stack web application by integrating a robust Firebase backend. This enhancement introduces secure, persistent data storage and real-time capabilities. Key features of the proposed system include:
+3. **Link to GitHub**:
+   - Create a new repository on [GitHub](https://github.com/new).
+   - Copy the repository URL (e.g., `https://github.com/your-username/maruthi-clinic-portal.git`).
+   - Run:
+     ```bash
+     git remote add origin <YOUR_GITHUB_REPO_URL>
+     ```
 
-*   **Secure Authentication:** Patients and doctors can create accounts and log in securely using either traditional email and password credentials or a modern Face ID verification system.
-*   **Comprehensive Registration:** Expanded registration forms for both patients and doctors capture essential information, including personal details, medical history, professional qualifications, and face images for biometric authentication.
-*   **Firestore Database:** All application data, including patient profiles, doctor information, appointments, medication requests, and messages, is securely stored and managed in a NoSQL Firestore database.
-*   **Role-Based Portals:** The application provides distinct portals for patients, doctors, and administrators, each with a tailored user interface and functionality.
-*   **Core Features:**
-    *   **Patient Portal:** Allows patients to schedule appointments with specialized doctors, view medical bills and download them as PDFs, manage medication refills, and communicate with their healthcare providers.
-    *   **Doctor Portal:** Enables doctors to manage their patient information, appointments, and professional details.
-*   **Data Security:** Firebase Security Rules are implemented to enforce strict data privacy, ensuring that users can only access their own information.
+4. **Push to Main**:
+   ```bash
+   git branch -M main
+   git push -u origin main
+   ```
 
-### SOFTWARE REQUIREMENTS
+5. **Publishing with Firebase App Hosting**:
+   - Go to the [Firebase Console](https://console.firebase.google.com/).
+   - Select your project.
+   - Navigate to **App Hosting** in the left sidebar.
+   - Click **Get Started** and connect your GitHub repository.
+   - Select the branch you want to deploy (e.g., `main`).
+   - Follow the wizard to complete the setup. Firebase will automatically build and deploy your app whenever you push to that branch.
 
-*   **Operating System:** Windows, macOS, or Linux
-*   **Web Browser:** Google Chrome, Firefox, Safari, or Microsoft Edge (latest versions)
-*   **Frontend Framework:** Next.js with React & TypeScript
-*   **Styling:** Tailwind CSS with ShadCN UI components
-*   **Backend-as-a-Service:** Google Firebase (including Firestore and Firebase Authentication)
-*   **Development Environment:** Node.js (v18 or later), npm/yarn
-*   **Code Editor:** Visual Studio Code or any other modern editor
+---
 
-### HARDWARE REQUIREMENTS
+## Project Features
 
-*   **Processor:** Multi-core processor (e.g., Intel Core i5, AMD Ryzen 5, or equivalent)
-*   **RAM:** Minimum 8 GB (16 GB recommended for smoother development)
-*   **Storage:** Minimum 20 GB of free disk space (SSD recommended)
-*   **Peripherals:** Webcam (required for Face ID login and registration)
-*   **Network:** A stable internet connection for accessing Firebase services
+### Patient Portal
+- **Dashboard**: Professional health overview with blood group and emergency contact visibility.
+- **Appointments**: Sequential, chronological view of upcoming clinical visits.
+- **Medications**: Integrated refill request system with automated notifications.
+- **Health Records**: Access to medical history and lab results.
+- **Billing**: Medical billing history in Rupees (Rs).
+
+### Doctor Portal
+- **Performance Dashboard**: Professional metrics including surgical success rates and patient volume.
+- **Operations Registry**: Detailed historical log of all clinical operations.
+- **Attendance**: Daily shift and work hour tracking.
+- **Specialized Onboarding**: Comprehensive registration with 20+ medical specialties and biometric verification (webcam or file upload).
+
+### Tech Stack
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS & ShadCN UI
+- **Backend**: Firebase (Firestore, Auth, App Hosting)
+- **Icons**: Lucide React
