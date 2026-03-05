@@ -1,3 +1,4 @@
+
 import {
   CalendarIcon,
   FileTextIcon,
@@ -146,3 +147,7 @@ export const initialBills = [
   { id: 'bill001', service: 'Cardiology Consultation', date: '2024-08-15', amount: 250, status: 'Paid', paymentMethod: 'Debit Card' },
   { id: 'bill002', service: 'Blood Lab Work', date: '2024-07-30', amount: 1200, status: 'Paid', paymentMethod: 'UPI' },
 ];
+
+export const bills = initialBills;
+export const labResults = initialLabResults;
+export const medicalHistory = initialMedicalHistory;

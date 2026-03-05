@@ -1,3 +1,4 @@
+
 /**
  * Utility functions for interacting with localStorage safely in a Next.js environment.
  * This acts as our "Client-Side Database" for Maruthi Clinic.
