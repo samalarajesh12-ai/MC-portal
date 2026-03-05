@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -37,97 +37,72 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
-import { format, parseISO, compareAsc } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 
 export default function AppointmentsPage() {
   const { toast } = useToast();
-  const [appointments, setAppointments] = useState<any[]>([]);
-  const [doctors, setDoctors] = useState<any[]>([]);
-  const [isMounted, setIsMounted] = useState(false);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  // Form State
   const [formData, setFormData] = useState({
     doctorId: '',
     date: '',
     time: '',
   });
 
-  useEffect(() => {
-    setIsMounted(true);
-    
-    seedStorage();
-    const storedAppointments = getStorageItem<any[]>('appointments', []);
-    const storedDoctors = getStorageItem<any[]>('doctors', []);
-    
-    // Sort appointments in sequential (chronological) order
-    const sorted = [...storedAppointments].sort((a, b) => {
-      const dateA = parseISO(`${a.date}T${convertTo24Hour(a.time)}`);
-      const dateB = parseISO(`${b.date}T${convertTo24Hour(b.time)}`);
-      return compareAsc(dateA, dateB);
-    });
-    
-    setAppointments(sorted);
-    setDoctors(storedDoctors);
-  }, []);
+  const doctorsQuery = useMemoFirebase(() => collection(firestore, 'doctors'), [firestore]);
+  const { data: doctors = [] } = useCollection(doctorsQuery);
 
-  const convertTo24Hour = (timeStr: string) => {
-    if (!timeStr) return '00:00';
-    const parts = timeStr.split(' ');
-    if (parts.length < 2) return timeStr;
-    const [time, modifier] = parts;
-    let [hours, minutes] = time.split(':');
-    if (hours === '12') hours = '00';
-    if (modifier === 'PM') hours = (parseInt(hours, 10) + 12).toString();
-    return `${hours.padStart(2, '0')}:${minutes}`;
-  };
+  const appointmentsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'patients', user.uid, 'appointments'), orderBy('date', 'asc')) : null, 
+    [firestore, user]
+  );
+  const { data: appointments = [], isLoading } = useCollection(appointmentsQuery);
 
   const handleSchedule = () => {
-    if (!formData.doctorId || !formData.date || !formData.time) return;
+    if (!formData.doctorId || !formData.date || !formData.time || !user) return;
 
-    const doctor = doctors.find(d => d.id === formData.doctorId);
+    const doctor = doctors?.find(d => d.id === formData.doctorId);
     const doctorFullName = `Dr. ${doctor?.firstName || ''} ${doctor?.lastName || ''}`.trim();
     
     const newApp = {
-      id: crypto.randomUUID(),
+      patientId: user.uid,
       doctor: doctorFullName || 'Clinical Provider',
-      department: doctor?.specialty || doctor?.specialization || 'General Clinic',
+      doctorId: formData.doctorId,
+      department: doctor?.specialty || 'General Clinic',
       date: formData.date,
       time: formData.time,
-      status: 'Confirmed'
+      status: 'Confirmed',
+      createdAt: new Date().toISOString()
     };
 
-    const updated = [newApp, ...appointments].sort((a, b) => {
-      const dateA = parseISO(`${a.date}T${convertTo24Hour(a.time)}`);
-      const dateB = parseISO(`${b.date}T${convertTo24Hour(b.time)}`);
-      return compareAsc(dateA, dateB);
-    });
+    const appointmentsRef = collection(firestore, 'patients', user.uid, 'appointments');
+    addDocumentNonBlocking(appointmentsRef, newApp);
 
-    setStorageItem('appointments', updated);
-    setAppointments(updated);
-
-    // Create a notification
-    const notifications = getStorageItem<any[]>('notifications', []);
-    const newNotif = {
-      id: crypto.randomUUID(),
+    // Create a cloud notification
+    const notificationsRef = collection(firestore, 'notifications');
+    addDocumentNonBlocking(notificationsRef, {
+      userId: user.uid,
       title: 'New Appointment Scheduled',
       description: `Confirmed visit with ${newApp.doctor} for ${format(parseISO(newApp.date), 'MMM do')} at ${newApp.time}.`,
       time: format(new Date(), 'h:mm a'),
       type: 'profile',
-      read: false
-    };
-    setStorageItem('notifications', [newNotif, ...notifications]);
+      read: false,
+      createdAt: new Date().toISOString()
+    });
 
     toast({
       title: "Appointment Confirmed",
-      description: `Scheduled with ${newApp.doctor} on ${newApp.date}.`,
+      description: `Scheduled with ${newApp.doctor} on ${newApp.date}. Synchronized to cloud.`,
     });
 
     setFormData({ doctorId: '', date: '', time: '' });
   };
 
-  if (!isMounted) return null;
+  if (isLoading) return <div className="text-center py-20 animate-pulse">Synchronizing Schedule...</div>;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -136,7 +111,7 @@ export default function AppointmentsPage() {
           <div>
             <CardTitle>Clinical Schedule</CardTitle>
             <CardDescription>
-              Review your medical visits in chronological sequence.
+              Review your medical visits. All records are synced across your devices.
             </CardDescription>
           </div>
           <Dialog>
@@ -163,9 +138,9 @@ export default function AppointmentsPage() {
                           <SelectValue placeholder="Select a doctor" />
                       </SelectTrigger>
                       <SelectContent>
-                          {doctors.map((doctor) => (
+                          {doctors?.map((doctor: any) => (
                               <SelectItem key={doctor.id} value={doctor.id}>
-                                  Dr. {doctor.firstName} {doctor.lastName || ''} ({doctor.specialization || doctor.specialty})
+                                  Dr. {doctor.firstName} {doctor.lastName || ''} ({doctor.specialty || 'Staff'})
                               </SelectItem>
                           ))}
                       </SelectContent>
@@ -201,8 +176,8 @@ export default function AppointmentsPage() {
           </Dialog>
         </CardHeader>
         <CardContent className="space-y-4">
-          {appointments.length > 0 ? (
-            appointments.map((appointment) => (
+          {appointments && appointments.length > 0 ? (
+            appointments.map((appointment: any) => (
               <Card key={appointment.id} className="border-primary/10 shadow-sm">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">

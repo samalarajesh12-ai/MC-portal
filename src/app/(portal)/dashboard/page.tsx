@@ -26,7 +26,6 @@ import {
   Calendar as CalendarIconIcon,
   Pill,
   ShieldCheck,
-  Plus,
   ShieldAlert,
   Activity,
   UserCheck,
@@ -40,14 +39,12 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -64,6 +61,8 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
+import { useFirestore, useUser, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { doc, collection, query, where, orderBy, limit } from 'firebase/firestore';
 
 const COMMON_DISEASES = [
   "Hypertension (High Blood Pressure)",
@@ -132,10 +131,6 @@ function ProfileEditForm({ user, onSave, onCancel }: { user: any, onSave: (updat
   };
 
   const handleSave = () => {
-    if (!faceImage) {
-      toast({ variant: 'destructive', title: 'Missing Identity', description: 'Biometric face image is mandatory for clinical profile updates.' });
-      return;
-    }
     onSave({
       ...user,
       contactNumber: editContact,
@@ -377,27 +372,26 @@ function DoctorDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: an
 }
 
 function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: any) => void }) {
-  const [userAppointments, setUserAppointments] = useState<any[]>([]);
-  const [userMedications, setUserMedications] = useState<any[]>([]);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const firestore = useFirestore();
+
+  const appointmentsQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'patients', user.id, 'appointments'), orderBy('date', 'asc'), limit(5)), 
+    [firestore, user.id]
+  );
+  const { data: userAppointments = [] } = useCollection(appointmentsQuery);
+
+  const medicationsQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'medications'), where('patientId', '==', user.id)), 
+    [firestore, user.id]
+  );
+  const { data: userMedications = [] } = useCollection(medicationsQuery);
+
+  const refillsNeededCount = userMedications?.filter((m) => m.refillsLeft === 0).length || 0;
 
   useEffect(() => {
-    seedStorage();
-    if (user) {
-      const allAppointments = getStorageItem<any[]>('appointments', []);
-      const allMedications = getStorageItem<any[]>('medications', []);
-      // Filter appointments and medications specifically for the logged-in user
-      const filteredApps = allAppointments.filter(a => a.patientId === user.id || a.patient === `${user.firstName} ${user.lastName}`);
-      const filteredMeds = allMedications.filter(med => med.patientId === user.id);
-      
-      setUserAppointments(filteredApps);
-      setUserMedications(filteredMeds);
-      
-      if (!user.isProfileCompleted) setShowProfileDialog(true);
-    }
+    if (!user.isProfileCompleted) setShowProfileDialog(true);
   }, [user]);
-
-  const refillsNeededCount = userMedications.filter((m) => m.refillsLeft === 0).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -406,7 +400,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
           <h1 className="text-3xl font-bold font-headline text-primary">
             Welcome back, {user.firstName}!
           </h1>
-          <p className="text-muted-foreground">Comprehensive clinical overview for Maruthi Clinic.</p>
+          <p className="text-muted-foreground">Comprehensive cloud-synced clinical overview.</p>
         </div>
         <div className="flex items-center gap-2">
            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 py-1 px-3">
@@ -422,7 +416,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
             <div className="bg-primary/10 p-2 rounded-full"><CalendarIconIcon className="h-4 w-4 text-primary" /></div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{userAppointments.length}</div>
+            <div className="text-2xl font-bold">{userAppointments?.length || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">Confirmed clinical visits logged.</p>
           </CardContent>
         </Card>
@@ -453,8 +447,8 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
             <Table>
               <TableHeader><TableRow><TableHead>Healthcare Provider</TableHead><TableHead>Department</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
               <TableBody>
-                {userAppointments.length > 0 ? (
-                  userAppointments.slice(0, 3).map((appointment) => (
+                {userAppointments && userAppointments.length > 0 ? (
+                  userAppointments.map((appointment: any) => (
                     <TableRow key={appointment.id}>
                       <TableCell><div className="font-semibold text-primary">{appointment.doctor}</div></TableCell>
                       <TableCell><Badge variant="outline">{appointment.department}</Badge></TableCell>
@@ -517,7 +511,7 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
         <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-headline text-primary">Synchronize Medical Identity</DialogTitle>
-            <DialogDescription>Maintain your clinical history and biometric identity for secure access.</DialogDescription>
+            <DialogDescription>Maintain your clinical history and biometric identity for secure cloud access.</DialogDescription>
           </DialogHeader>
           <ProfileEditForm 
             user={user} 
@@ -532,46 +526,41 @@ function PatientDashboard({ user, onUpdate }: { user: any, onUpdate: (updated: a
 
 export default function DashboardPage() {
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
+  const firestore = useFirestore();
+  const { user: firebaseUser, isUserLoading } = useUser();
+  
+  // Use the firestore user profile instead of localStorage
+  const userProfileRef = useMemoFirebase(() => firebaseUser ? doc(firestore, 'patients', firebaseUser.uid) : null, [firestore, firebaseUser]);
+  const doctorProfileRef = useMemoFirebase(() => firebaseUser ? doc(firestore, 'doctors', firebaseUser.uid) : null, [firestore, firebaseUser]);
+  
+  const { data: patientProfile, isLoading: isPatientLoading } = useDoc(userProfileRef);
+  const { data: doctorProfile, isLoading: isDoctorLoading } = useDoc(doctorProfileRef);
 
-  useEffect(() => {
-    seedStorage();
-    const currentUser = getStorageItem('currentUser', null);
-    setUser(currentUser);
-  }, []);
+  const activeUser = patientProfile || doctorProfile;
 
   const handleUpdate = (updatedUser: any) => {
-    // Save to active session
-    setStorageItem('currentUser', updatedUser);
-    setUser(updatedUser);
-    
-    // Synchronize to the master registry (patients or doctors)
     const collectionName = updatedUser.role === 'doctor' ? 'doctors' : 'patients';
-    const items = getStorageItem<any[]>(collectionName, []);
-    const idx = items.findIndex(i => i.id === updatedUser.id);
-    if (idx > -1) {
-      items[idx] = updatedUser;
-      setStorageItem(collectionName, items);
-    } else {
-      // If not found (e.g., initial registration without registry entry), add it
-      setStorageItem(collectionName, [...items, updatedUser]);
-    }
+    const userRef = doc(firestore, collectionName, updatedUser.id);
+    
+    updateDocumentNonBlocking(userRef, updatedUser);
 
-    // Create a clinical update notification
-    const notifications = getStorageItem<any[]>('notifications', []);
-    setStorageItem('notifications', [{
+    // Create a clinical update notification in cloud
+    const notificationsRef = collection(firestore, 'notifications');
+    addDocumentNonBlocking(notificationsRef, {
       id: crypto.randomUUID(),
+      userId: updatedUser.id,
       title: 'Clinical Profile Synchronized',
-      description: 'Your contact information and biometric identity have been updated successfully.',
+      description: 'Your contact information and biometric identity have been updated successfully in the cloud.',
       time: format(new Date(), 'h:mm a'),
       type: 'profile',
-      read: false
-    }, ...notifications]);
+      read: false,
+      createdAt: new Date().toISOString()
+    });
 
-    toast({ title: "Clinical Synchronization Success", description: "Your clinical records have been updated in real-time." });
+    toast({ title: "Clinical Synchronization Success", description: "Your clinical records have been updated in real-time across all devices." });
   };
 
-  if (!user) {
+  if (isUserLoading || isPatientLoading || isDoctorLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-muted-foreground animate-pulse font-medium">Synchronizing clinical environment...</p>
@@ -579,5 +568,14 @@ export default function DashboardPage() {
     );
   }
 
-  return user.role === 'doctor' ? <DoctorDashboard user={user} onUpdate={handleUpdate} /> : <PatientDashboard user={user} onUpdate={handleUpdate} />;
+  if (!activeUser) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground font-medium">Identity synchronization failed or session expired.</p>
+        <Button asChild><Link href="/">Return to Login</Link></Button>
+      </div>
+    );
+  }
+
+  return activeUser.role === 'doctor' ? <DoctorDashboard user={activeUser} onUpdate={handleUpdate} /> : <PatientDashboard user={activeUser} onUpdate={handleUpdate} />;
 }

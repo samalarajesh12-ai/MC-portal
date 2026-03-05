@@ -1,7 +1,7 @@
 
 /**
- * Utility functions for interacting with localStorage safely in a Next.js environment.
- * This acts as our "Client-Side Database" for Maruthi Clinic.
+ * Utility functions for interacting with clinical data.
+ * Migrated to Firestore for cloud-sync, but maintaining localStorage fallback for session-only metadata.
  */
 import { 
   initialAppointments, 
@@ -38,34 +38,18 @@ export const removeStorageItem = (key: string): void => {
 };
 
 /**
- * Seeds localStorage with initial professional clinical data.
- * This runs once per browser to ensure the app is never "empty".
+ * Historical seed function.
+ * Cloud sync is now handled primarily via direct Firestore hooks in components.
  */
 export const seedStorage = () => {
   if (typeof window === 'undefined') return;
 
-  // Bumped version for 2026 year update
-  const SEED_KEY = 'maruthi_clinic_v1.2.5_year_2026_sync';
+  const SEED_KEY = 'maruthi_clinic_v1.3.0_cloud_sync_ready';
 
   if (!localStorage.getItem(SEED_KEY)) {
-    // 1. Core User Collections
-    setStorageItem('patients', getStorageItem('patients', []));
-    setStorageItem('doctors', initialDoctors);
-    
-    // 2. Clinical Activity Data
-    setStorageItem('appointments', initialAppointments);
-    setStorageItem('medications', initialMedications);
-    setStorageItem('bills', initialBills);
-    
-    // 3. Health Record System
-    setStorageItem('labResults', initialLabResults);
-    setStorageItem('medicalHistory', initialMedicalHistory);
-    
-    // 4. System Notifications
-    if (!localStorage.getItem('notifications')) setStorageItem('notifications', []);
-    
-    // Mark as seeded to prevent overwriting user data on next reload
+    // We maintain localStorage for local session caching if needed, 
+    // but the app now prioritizes Firestore for multi-device visibility.
     localStorage.setItem(SEED_KEY, 'true');
-    console.log("Maruthi Clinic: Professional storage seeded with 2026 appointments.");
+    console.log("Maruthi Clinic: Portal optimized for cloud-sync 2026.");
   }
 };

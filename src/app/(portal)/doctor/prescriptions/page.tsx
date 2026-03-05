@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -22,14 +22,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getStorageItem, setStorageItem, seedStorage } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { useFirestore, useUser, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function DoctorPrescriptionsPage() {
   const { toast } = useToast();
-  const [patients, setPatients] = useState<any[]>([]);
-  const [doctor, setDoctor] = useState<any>(null);
+  const { user: doctorUser } = useUser();
+  const firestore = useFirestore();
+
+  const patientsQuery = useMemoFirebase(() => collection(firestore, 'patients'), [firestore]);
+  const { data: patients = [] } = useCollection(patientsQuery);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -40,48 +44,41 @@ export default function DoctorPrescriptionsPage() {
     refills: 0
   });
 
-  useEffect(() => {
-    seedStorage();
-    setPatients(getStorageItem<any[]>('patients', []));
-    setDoctor(getStorageItem<any>('currentUser', null));
-  }, []);
-
   const handleIssuePrescription = () => {
-    if (!formData.patientId || !formData.name || !formData.dosage) {
+    if (!formData.patientId || !formData.name || !formData.dosage || !doctorUser) {
         toast({ variant: 'destructive', title: 'Incomplete Form', description: 'Please fill in all clinical details.' });
         return;
     }
 
     const newPrescription = {
-      id: crypto.randomUUID(),
       patientId: formData.patientId,
       name: formData.name,
       dosage: formData.dosage,
       frequency: formData.frequency,
       refillsLeft: formData.refills,
       lastRefill: format(new Date(), 'yyyy-MM-dd'),
-      issuedBy: `Dr. ${doctor?.lastName}`
+      issuedBy: doctorUser.displayName || 'Doctor',
+      createdAt: new Date().toISOString()
     };
 
-    const medications = getStorageItem<any[]>('medications', []);
-    setStorageItem('medications', [newPrescription, ...medications]);
+    const medicationsRef = collection(firestore, 'medications');
+    addDocumentNonBlocking(medicationsRef, newPrescription);
 
-    // Notify the patient via internal notification system
-    const notifications = getStorageItem<any[]>('notifications', []);
-    const newNotif = {
-      id: crypto.randomUUID(),
-      patientId: formData.patientId,
+    // Notify the patient via cloud notification system
+    const notificationsRef = collection(firestore, 'notifications');
+    addDocumentNonBlocking(notificationsRef, {
+      userId: formData.patientId,
       title: 'New Prescription Issued',
-      description: `A new prescription for ${formData.name} has been added to your record by Dr. ${doctor?.lastName}.`,
+      description: `A new prescription for ${formData.name} has been added to your record. Syncing across devices.`,
       time: format(new Date(), 'h:mm a'),
       type: 'refill',
-      read: false
-    };
-    setStorageItem('notifications', [newNotif, ...notifications]);
+      read: false,
+      createdAt: new Date().toISOString()
+    });
 
     toast({
       title: "Prescription Issued",
-      description: `Medication ${formData.name} synchronized with patient record.`,
+      description: `Medication ${formData.name} synchronized with patient record in the cloud.`,
     });
 
     setFormData({ patientId: '', name: '', dosage: '', frequency: '', refills: 0 });
@@ -95,7 +92,7 @@ export default function DoctorPrescriptionsPage() {
             <Pill className="h-8 w-8" />
             Digital Prescription System
           </h1>
-          <p className="text-muted-foreground">Issue digital medical orders and synchronize with the pharmacy records.</p>
+          <p className="text-muted-foreground">Issue digital medical orders and synchronize with the pharmacy records in real-time.</p>
         </div>
       </div>
 
@@ -116,7 +113,7 @@ export default function DoctorPrescriptionsPage() {
                     <SelectValue placeholder="Select patient" />
                   </SelectTrigger>
                   <SelectContent>
-                    {patients.map((p) => (
+                    {patients?.map((p: any) => (
                       <SelectItem key={p.id} value={p.id}>{p.firstName} {p.lastName}</SelectItem>
                     ))}
                   </SelectContent>
@@ -175,9 +172,8 @@ export default function DoctorPrescriptionsPage() {
               <div className="bg-primary/10 p-3 rounded-full mb-3">
                 <User className="h-8 w-8 text-primary" />
               </div>
-              <div className="font-bold text-lg">Dr. {doctor?.lastName}</div>
-              <div className="text-xs text-muted-foreground uppercase">{doctor?.specialty || 'Medical Practitioner'}</div>
-              <Badge className="mt-4 bg-green-600">ID Verified</Badge>
+              <div className="font-bold text-lg">{doctorUser?.displayName || 'Doctor'}</div>
+              <Badge className="mt-4 bg-green-600">Cloud Verified ID</Badge>
             </div>
             <p className="text-[10px] text-muted-foreground text-center italic">
               Every digital prescription is cryptographically signed and tracked for clinical audit purposes.
